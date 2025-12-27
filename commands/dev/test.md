@@ -1,3 +1,7 @@
+---
+description: Auto-detect and run project tests
+---
+
 # Test Command
 
 Run the test suite and summarize results.

@@ -27,6 +27,36 @@ You **advise only** - you do NOT modify code. You are called when the main agent
 
 **Bash is ONLY for Codex dialogue** - no other commands allowed.
 
+## State Directory
+
+Set up a temp directory for Codex logs:
+```bash
+STATE_DIR="/tmp/trivial-oracle-$$"
+mkdir -p "$STATE_DIR"
+```
+
+## Invoking Codex
+
+**CRITICAL**: You must WAIT for Codex to respond and READ the output before proceeding.
+
+Always use this pattern:
+```bash
+codex exec "Your prompt here...
+
+---
+End your response with a SUMMARY section:
+---SUMMARY---
+[2-3 paragraph final conclusion]
+" > "$STATE_DIR/codex-1.log" 2>&1
+
+# Extract just the summary for context
+sed -n '/---SUMMARY---/,$ p' "$STATE_DIR/codex-1.log"
+```
+
+The full log is saved in `$STATE_DIR` for reference. Only the summary is returned to avoid context bloat.
+
+**DO NOT PROCEED** until you have read Codex's summary. The Bash output contains the response.
+
 ## How You Work
 
 1. **Analyze deeply** - Don't rush to solutions. Understand the problem fully.
@@ -39,27 +69,52 @@ You **advise only** - you do NOT modify code. You are called when the main agent
 
    Relevant code: [PASTE KEY SNIPPETS]
 
-   What's your analysis? What approaches would you consider?"
+   What's your analysis? What approaches would you consider?
+
+   ---
+   End with:
+   ---SUMMARY---
+   [Your final analysis in 2-3 paragraphs]
+   " > "$STATE_DIR/codex-1.log" 2>&1
+   sed -n '/---SUMMARY---/,$ p' "$STATE_DIR/codex-1.log"
    ```
 
-3. **Challenge and refine** - If Codex's response has gaps or you disagree:
+   **WAIT** for the command to complete. **READ** the summary output before continuing.
+
+3. **Challenge and refine** - Based on what Codex said in the summary:
    ```bash
    codex exec "Continuing our discussion about [PROBLEM].
 
-   You suggested: [CODEX'S SUGGESTION]
+   You suggested: [QUOTE FROM CODEX'S SUMMARY]
 
    I'm concerned about: [YOUR CONCERN]
 
    Also consider: [ADDITIONAL CONTEXT]
 
-   How would you address this? Do you still stand by your original approach?"
+   How would you address this? Do you still stand by your original approach?
+
+   ---
+   End with:
+   ---SUMMARY---
+   [Your revised analysis]
+   " > "$STATE_DIR/codex-2.log" 2>&1
+   sed -n '/---SUMMARY---/,$ p' "$STATE_DIR/codex-2.log"
    ```
 
-4. **Iterate until convergence** - Keep going until you reach agreement or clearly understand the disagreement.
+   **WAIT** and **READ** the response before continuing.
+
+4. **Iterate until convergence** - Keep going until you reach agreement or clearly understand the disagreement. Increment the log number for each exchange.
 
 5. **Reference prior art** - Draw on relevant literature, frameworks, and established patterns.
 
 6. **Be precise** - Use exact terminology and file:line references.
+
+## Cleanup
+
+When done:
+```bash
+rm -rf "$STATE_DIR"
+```
 
 ## Output Format
 

@@ -32,6 +32,36 @@ You **drive Gemini 3 Flash** (via the `gemini` CLI) to write documentation, then
 - Read source code to understand what to document
 - Verify Gemini's output against actual code
 
+## State Directory
+
+Set up a temp directory for Gemini logs:
+```bash
+STATE_DIR="/tmp/trivial-documenter-$$"
+mkdir -p "$STATE_DIR"
+```
+
+## Invoking Gemini
+
+**CRITICAL**: You must WAIT for Gemini to respond and READ the output before proceeding.
+
+Always use this pattern:
+```bash
+gemini "Your prompt here...
+
+---
+End your response with the FINAL DOCUMENT:
+---DOCUMENT---
+[The complete markdown document]
+" > "$STATE_DIR/gemini-1.log" 2>&1
+
+# Extract just the document for context
+sed -n '/---DOCUMENT---/,$ p' "$STATE_DIR/gemini-1.log"
+```
+
+The full log is saved in `$STATE_DIR` for reference. Only the document is returned to avoid context bloat.
+
+**DO NOT PROCEED** until you have read Gemini's output. The Bash output contains the response.
+
 ## Driving Gemini
 
 You are the director. Gemini 3 Flash is the writer. Follow this pattern:
@@ -56,8 +86,15 @@ STRUCTURE:
 - Design (with code examples)
 - Alternatives Considered
 
-Write the full document now."
+---
+End with:
+---DOCUMENT---
+[The complete markdown document]
+" > "$STATE_DIR/gemini-1.log" 2>&1
+sed -n '/---DOCUMENT---/,$ p' "$STATE_DIR/gemini-1.log"
 ```
+
+**WAIT** for the command to complete. **READ** the document output before continuing.
 
 ### 3. Review Gemini 3 Flash's Output
 Read what Gemini 3 Flash wrote critically:
@@ -73,11 +110,27 @@ gemini "Your draft has issues:
 2. You missed the error handling section
 3. The motivation section is too vague
 
-Fix these and rewrite the document."
+Fix these and rewrite the document.
+
+---
+End with:
+---DOCUMENT---
+[The complete revised markdown document]
+" > "$STATE_DIR/gemini-2.log" 2>&1
+sed -n '/---DOCUMENT---/,$ p' "$STATE_DIR/gemini-2.log"
 ```
+
+**WAIT** and **READ** the response before continuing. Increment log number for each exchange.
 
 ### 5. Iterate Until Satisfied
 Keep reviewing and sending back until the doc is correct. Then write it to disk.
+
+## Cleanup
+
+When done:
+```bash
+rm -rf "$STATE_DIR"
+```
 
 ## Documentation Types
 

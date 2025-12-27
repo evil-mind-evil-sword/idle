@@ -43,6 +43,7 @@ trivial/
 ├── commands/            # Command definitions
 │   ├── dev/
 │   │   ├── commit.md
+│   │   ├── document.md
 │   │   ├── fmt.md
 │   │   ├── plan.md
 │   │   ├── review.md
@@ -64,7 +65,7 @@ Minimal metadata for the plugin:
 ```json
 {
   "name": "trivial",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Multi-model development agents...",
   "author": { "name": "femtomc" }
 }

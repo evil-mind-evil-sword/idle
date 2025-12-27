@@ -1,3 +1,7 @@
+---
+description: Pick an issue and work it to completion
+---
+
 # Work Command
 
 Work a single issue to completion.

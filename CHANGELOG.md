@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-12-27
+
+### Added
+
+- `/document` command to invoke documenter agent
+- State directory pattern for Codex/Gemini logs (`/tmp/trivial-<agent>-$$`)
+- `---SUMMARY---` delimiter for Codex responses
+- `---DOCUMENT---` delimiter for Gemini responses
+- Explicit wait/read blocking instructions in all external model agents
+
+### Changed
+
+- `oracle`, `reviewer`, `planner` agents now log full Codex output to temp files
+- `documenter` agent now logs full Gemini output to temp files
+- Only summary/document sections returned to agent context (reduces bloat)
+- YAML frontmatter added to all command files
+
+### Fixed
+
+- README: Corrected gemini-cli package name (`@google/gemini-cli`)
+- docs/architecture.md: Updated version to match plugin.json
+- docs/architecture.md: Added document.md to directory structure
+- agents/planner.md: Fixed tissue commands (`new` not `create`, `dep add`, `tag add`)
+- agents/reviewer.md, commands/dev/review.md: Fixed style guide path reference
+
 ## [0.2.0] - 2025-12-27
 
 ### Added

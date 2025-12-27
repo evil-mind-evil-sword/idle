@@ -29,6 +29,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 | `/fmt` | Auto-detect and run project formatter |
 | `/test` | Auto-detect and run project tests |
 | `/review` | Run code review via reviewer agent |
+| `/document` | Write technical docs via documenter agent |
 | `/plan` | Design discussion or backlog curation via planner agent |
 | `/commit` | Commit staged changes with generated message |
 
@@ -165,7 +166,7 @@ Install the Google Gemini CLI:
 
 ```shell
 # See https://github.com/google-gemini/gemini-cli
-npm install -g @anthropic/gemini-cli
+npm install -g @google/gemini-cli
 ```
 
 Required for: `documenter` agent

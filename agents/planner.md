@@ -29,6 +29,36 @@ You help with:
 - `codex exec` for dialogue
 - `git log`, `git diff` (read-only git)
 
+## State Directory
+
+Set up a temp directory for Codex logs:
+```bash
+STATE_DIR="/tmp/trivial-planner-$$"
+mkdir -p "$STATE_DIR"
+```
+
+## Invoking Codex
+
+**CRITICAL**: You must WAIT for Codex to respond and READ the output before proceeding.
+
+Always use this pattern:
+```bash
+codex exec "Your prompt here...
+
+---
+End your response with a SUMMARY section:
+---SUMMARY---
+[Prioritized list of recommendations]
+" > "$STATE_DIR/codex-1.log" 2>&1
+
+# Extract just the summary for context
+sed -n '/---SUMMARY---/,$ p' "$STATE_DIR/codex-1.log"
+```
+
+The full log is saved in `$STATE_DIR` for reference. Only the summary is returned to avoid context bloat.
+
+**DO NOT PROCEED** until you have read Codex's summary. The Bash output contains the response.
+
 ## Tissue Commands
 
 ```bash
@@ -38,18 +68,18 @@ tissue ready                   # Unblocked issues
 tissue show <id>               # Issue details
 
 # Create
-tissue create "Title" -p 2 -t tag1,tag2
+tissue new "Title" -p 2 -t tag1,tag2
 
 # Update
 tissue status <id> closed      # Close issue
 tissue status <id> paused      # Pause issue
-tissue priority <id> 1         # Change priority
-tissue tag <id> add newtag     # Add tag
+tissue edit <id> --priority 1  # Change priority
+tissue tag add <id> newtag     # Add tag
 tissue comment <id> -m "..."   # Add comment
 
-# Link
-tissue link <id1> blocks <id2>
-tissue link <id1> parent <id2>
+# Dependencies
+tissue dep add <id1> blocks <id2>
+tissue dep add <id1> parent <id2>
 ```
 
 ## How You Work
@@ -67,21 +97,46 @@ tissue link <id1> parent <id2>
 
    Question: [PLANNING QUESTION]
 
-   What's your analysis?"
+   What's your analysis?
+
+   ---
+   End with:
+   ---SUMMARY---
+   [Prioritized recommendations with rationale]
+   " > "$STATE_DIR/codex-1.log" 2>&1
+   sed -n '/---SUMMARY---/,$ p' "$STATE_DIR/codex-1.log"
    ```
+
+   **WAIT** for the command to complete. **READ** the summary output before continuing.
 
 3. **Iterate on the plan**:
    ```bash
    codex exec "Continuing our planning discussion.
 
-   You suggested: [CODEX'S SUGGESTION]
+   You suggested: [QUOTE FROM CODEX'S SUMMARY]
 
    I think we should also consider: [YOUR ADDITIONS]
 
-   How would you prioritize these? What dependencies do you see?"
+   How would you prioritize these? What dependencies do you see?
+
+   ---
+   End with:
+   ---SUMMARY---
+   [Revised prioritized list]
+   " > "$STATE_DIR/codex-2.log" 2>&1
+   sed -n '/---SUMMARY---/,$ p' "$STATE_DIR/codex-2.log"
    ```
 
+   **WAIT** and **READ** the response before continuing.
+
 4. **Execute** - Create issues, set priorities, link dependencies
+
+## Cleanup
+
+When done:
+```bash
+rm -rf "$STATE_DIR"
+```
 
 ## Output Format
 

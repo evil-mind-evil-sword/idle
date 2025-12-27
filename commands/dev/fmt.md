@@ -1,3 +1,7 @@
+---
+description: Auto-detect and run project formatter
+---
+
 # Format Command
 
 Format source code and show what changed.
