@@ -158,18 +158,18 @@ main() {
     if check_command claude; then
         info "Installing idle plugin..."
         claude plugin marketplace add evil-mind-evil-sword/marketplace 2>/dev/null || true
-        if claude plugin install idle@evil-sword 2>/dev/null; then
+        if claude plugin install idle@emes 2>/dev/null; then
             success "idle plugin installed!"
         else
             warn "Plugin install failed. Try manually in Claude Code:"
             printf "  ${GREEN}/plugin marketplace add evil-mind-evil-sword/marketplace${NC}\n"
-            printf "  ${GREEN}/plugin install idle@evil-sword${NC}\n"
+            printf "  ${GREEN}/plugin install idle@emes${NC}\n"
         fi
     else
         warn "claude CLI not found. Install the plugin manually in Claude Code:"
         printf "\n"
         printf "  ${GREEN}/plugin marketplace add evil-mind-evil-sword/marketplace${NC}\n"
-        printf "  ${GREEN}/plugin install idle@evil-sword${NC}\n"
+        printf "  ${GREEN}/plugin install idle@emes${NC}\n"
     fi
 
     printf "\n"
