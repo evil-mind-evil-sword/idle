@@ -39,9 +39,9 @@ echo "$ARGUMENTS" > "$STATE_DIR/issue"
 echo "0" > "$STATE_DIR/iter"
 
 # Initialize messaging and announce
-[ ! -d .zawinski ] && zawinski init
-zawinski topic new "issue:$ARGUMENTS" 2>/dev/null || true
-zawinski post "issue:$ARGUMENTS" -m "[issue] STARTED: Beginning work on issue"
+[ ! -d .jwz ] && jwz init
+jwz topic new "issue:$ARGUMENTS" 2>/dev/null || true
+jwz post "issue:$ARGUMENTS" -m "[issue] STARTED: Beginning work on issue"
 ```
 
 ## Messaging
@@ -50,13 +50,13 @@ Post status updates during issue work:
 
 ```bash
 # On iteration start
-zawinski post "issue:$ARGUMENTS" -m "[issue] ITERATION $ITER: Retrying after failure"
+jwz post "issue:$ARGUMENTS" -m "[issue] ITERATION $ITER: Retrying after failure"
 
 # On stuck
-zawinski post "issue:$ARGUMENTS" -m "[issue] STUCK: Same error 3 times - needs help"
+jwz post "issue:$ARGUMENTS" -m "[issue] STUCK: Same error 3 times - needs help"
 
 # On complete
-zawinski post "issue:$ARGUMENTS" -m "[issue] COMPLETE: Issue resolved"
+jwz post "issue:$ARGUMENTS" -m "[issue] COMPLETE: Issue resolved"
 ```
 
 ## Workflow

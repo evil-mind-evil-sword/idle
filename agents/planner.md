@@ -51,18 +51,18 @@ Post status updates and coordinate with other agents via zawinski:
 
 ```bash
 # Ensure initialized
-[ ! -d .zawinski ] && zawinski init
+[ ! -d .jwz ] && jwz init
 
 # Create topic for feature breakdown
-zawinski topic new "issue:$ISSUE_ID"
-zawinski post "issue:$ISSUE_ID" -m "[planner] STARTED: Breaking down feature"
+jwz topic new "issue:$ISSUE_ID"
+jwz post "issue:$ISSUE_ID" -m "[planner] STARTED: Breaking down feature"
 
 # Post decision summary
-zawinski post "project:$(basename $PWD)" -m "[planner] DECISION: Using approach A. See artifact."
+jwz post "project:$(basename $PWD)" -m "[planner] DECISION: Using approach A. See artifact."
 
 # Read other agents' messages
-zawinski read "agent:oracle"
-zawinski search "blocking"
+jwz read "agent:oracle"
+jwz search "blocking"
 ```
 
 Use messaging for quick status updates. Use artifacts for polished decisions.
@@ -75,7 +75,7 @@ Use messaging for quick status updates. Use artifacts for polished decisions.
 
 **Bash is for:**
 - `tissue` commands (full access: create, update, link, close, etc.)
-- `zawinski` commands (post, read, search messages)
+- `jwz` commands (post, read, search messages)
 - Second opinion dialogue (`codex exec` or `claude -p`)
 - Invoking other agents (`claude -p`)
 - `git log`, `git diff` (read-only git)

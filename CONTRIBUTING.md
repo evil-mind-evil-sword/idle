@@ -85,7 +85,7 @@ See `commands/dev/fmt.md` for a simple example or `commands/loop/grind.md` for a
 
 ## Messaging Guidelines
 
-Agents communicate via zawinski messaging:
+Agents communicate via zawinski messaging (`jwz` CLI):
 
 - **Messages** are for quick status updates and notes
 - **Artifacts** (`.claude/plugins/trivial/{agent}/`) are for polished outputs

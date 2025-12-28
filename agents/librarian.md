@@ -60,13 +60,13 @@ Post quick findings before full artifact via zawinski:
 
 ```bash
 # Post quick discovery
-zawinski post "agent:documenter" -m "[librarian] FYI: React Query v5 changed caching API significantly"
+jwz post "agent:documenter" -m "[librarian] FYI: React Query v5 changed caching API significantly"
 
 # Reply to research request
-zawinski reply "$MSG_ID" -m "[librarian] RESEARCH: Complete. See .claude/plugins/trivial/librarian/react-query-v5.md"
+jwz reply "$MSG_ID" -m "[librarian] RESEARCH: Complete. See .claude/plugins/trivial/librarian/react-query-v5.md"
 
 # Check for research requests
-zawinski read "agent:librarian"
+jwz read "agent:librarian"
 ```
 
 ## How You Work

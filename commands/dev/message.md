@@ -34,16 +34,16 @@ Quick messaging for agent coordination.
 
 ## Workflow
 
-1. Ensure zawinski is initialized:
+1. Ensure jwz is initialized:
    ```bash
-   [ ! -d .zawinski ] && zawinski init
+   [ ! -d .jwz ] && jwz init
    ```
 
 2. Parse command arguments:
-   - If first arg is `read`: `zawinski read <topic>`
-   - If first arg is `thread`: `zawinski thread <id>`
-   - If first arg is `search`: `zawinski search <query>`
-   - Otherwise: `zawinski post <topic> -m "<message>"`
+   - If first arg is `read`: `jwz read <topic>`
+   - If first arg is `thread`: `jwz thread <id>`
+   - If first arg is `search`: `jwz search <query>`
+   - Otherwise: `jwz post <topic> -m "<message>"`
 
 3. Display output
 

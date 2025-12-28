@@ -54,13 +54,13 @@ Coordinate with other agents via zawinski:
 
 ```bash
 # Ask librarian for research
-zawinski post "agent:librarian" -m "[documenter] REQUEST: Need research on React Query caching patterns"
+jwz post "agent:librarian" -m "[documenter] REQUEST: Need research on React Query caching patterns"
 
 # Signal doc ready for review
-zawinski post "project:$(basename $PWD)" -m "[documenter] READY: New doc at docs/caching.md"
+jwz post "project:$(basename $PWD)" -m "[documenter] READY: New doc at docs/caching.md"
 
 # Check for related discussions
-zawinski search "caching"
+jwz search "caching"
 ```
 
 ## Constraints

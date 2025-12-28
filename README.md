@@ -175,15 +175,15 @@ cargo install --git https://github.com/femtomc/tissue tissue
 
 Required for: `/work`, `/grind`, `/issue`
 
-### zawinski: command not found
+### jwz: command not found
 
-Install the zawinski messaging CLI:
+Install the jwz messaging CLI:
 
 ```shell
-cargo install --git https://github.com/femtomc/zawinski zawinski
+cargo install --git https://github.com/femtomc/zawinski jwz
 ```
 
-Required for: agent-to-agent messaging. Initialize with `zawinski init`.
+Required for: agent-to-agent messaging. Initialize with `jwz init`.
 
 ### codex: command not found
 
@@ -205,7 +205,7 @@ npm install -g @google/gemini-cli
 
 ### Agent not responding or errors
 
-1. Check that required tools are installed: `which tissue`, `which zawinski`, `which uv`, `which gh`
+1. Check that required tools are installed: `which tissue`, `which jwz`, `which uv`, `which gh`
 2. If using codex/gemini, verify API credentials (Codex needs `OPENAI_API_KEY`, Gemini needs Google auth)
 3. Try running the tool directly to see its error output
 

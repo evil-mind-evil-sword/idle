@@ -221,7 +221,7 @@ The documenter reviews Gemini's output, sends corrections, and iterates until sa
 
 ## Agent Messaging
 
-Agents communicate asynchronously via [zawinski](https://github.com/femtomc/zawinski), a topic-based messaging CLI.
+Agents communicate asynchronously via [zawinski](https://github.com/femtomc/zawinski) (`jwz` CLI), a topic-based messaging CLI.
 
 ### Topic Naming Convention
 
@@ -235,18 +235,18 @@ Agents communicate asynchronously via [zawinski](https://github.com/femtomc/zawi
 
 ```bash
 # Initialize (once per project)
-zawinski init
+jwz init
 
 # Create topic and post
-zawinski topic new "issue:auth-123"
-zawinski post "issue:auth-123" -m "[planner] STARTED: Breaking down auth feature"
+jwz topic new "issue:auth-123"
+jwz post "issue:auth-123" -m "[planner] STARTED: Breaking down auth feature"
 
 # Read and reply
-zawinski read "issue:auth-123"
-zawinski reply <msg-id> -m "[oracle] FINDING: Race condition in handler.go:45"
+jwz read "issue:auth-123"
+jwz reply <msg-id> -m "[oracle] FINDING: Race condition in handler.go:45"
 
 # Search across all messages
-zawinski search "security"
+jwz search "security"
 ```
 
 ### Message Format
@@ -265,8 +265,8 @@ Examples:
 
 | Use Case | Mechanism | Location |
 |----------|-----------|----------|
-| Quick status update | Message | `.zawinski/` |
-| Research finding (quick) | Message | `.zawinski/` |
+| Quick status update | Message | `.jwz/` |
+| Research finding (quick) | Message | `.jwz/` |
 | Research finding (full) | Artifact | `.claude/plugins/trivial/{agent}/` |
 | Design decision | Artifact + message | Both |
 

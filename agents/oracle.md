@@ -50,13 +50,13 @@ Post findings and respond to questions via zawinski:
 
 ```bash
 # Check if anyone asked for analysis
-zawinski read "agent:oracle"
+jwz read "agent:oracle"
 
 # Post quick finding (before full analysis)
-zawinski post "issue:$ISSUE_ID" -m "[oracle] FINDING: Race condition in handler.go:45"
+jwz post "issue:$ISSUE_ID" -m "[oracle] FINDING: Race condition in handler.go:45"
 
 # Reply to specific question
-zawinski reply "$MSG_ID" -m "[oracle] Yes, this needs mutex. See recommendation."
+jwz reply "$MSG_ID" -m "[oracle] Yes, this needs mutex. See recommendation."
 ```
 
 ## Constraints
@@ -70,7 +70,7 @@ zawinski reply "$MSG_ID" -m "[oracle] Yes, this needs mutex. See recommendation.
 - Second opinion dialogue (`codex exec` or `claude -p`)
 - Invoking other agents (`claude -p`)
 - Artifact search (`./scripts/search.py`)
-- `zawinski` commands (post, read, search messages)
+- `jwz` commands (post, read, search messages)
 
 ## State Directory
 

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Zawinski messaging integration** - Async topic-based messaging between agents
+- **Zawinski messaging integration** - Async topic-based messaging between agents (`jwz` CLI)
 - `/message` command for posting and reading messages
 - Messaging sections in all opus agents (oracle, reviewer, planner, documenter) and librarian
 - Message status updates in `/grind` and `/issue` loop commands
