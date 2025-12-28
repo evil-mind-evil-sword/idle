@@ -138,6 +138,18 @@ If `/issue` returns STUCK or MAX_ITERATIONS:
 - Issue is already paused by `/issue`
 - Continue to next issue
 
+## Definition of Done (Per Issue)
+
+For each issue in the grind session, you MUST:
+
+1. **Run `/review`** after implementation (step 4 in workflow)
+2. **Address CHANGES_REQUESTED** feedback (max 3 review iterations)
+3. **If review limit exceeded**: Create follow-up issue with `review-followup` tag
+
+The stop hook reminds you of review requirements. Do not emit `<issue-complete>DONE</issue-complete>` until reviewed.
+
+**When stuck on design decisions**: Consult `idle:oracle` before making architectural choices.
+
 ## Completion
 
 **All done**:

@@ -311,6 +311,7 @@ fi
 
 # Build worktree context if available
 WORKTREE_CONTEXT=""
+PHASE_CONTEXT=""
 if [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PATH" ]]; then
     WORKTREE_CONTEXT="
 
@@ -323,10 +324,44 @@ IMPORTANT: All file operations must use absolute paths under $WORKTREE_PATH
 - Read/Write/Edit: Use absolute paths like $WORKTREE_PATH/src/file.py
 - Bash commands: Start with cd \"$WORKTREE_PATH\" && ...
 - tissue commands: Run from main repo only (not worktree)"
+
+    # Derive phase from git state
+    LAST_REVIEWED_SHA=$(echo "$TOP" | jq -r '.last_reviewed_sha // empty')
+
+    # Check for uncommitted changes
+    HAS_CHANGES=false
+    if ! git -C "$WORKTREE_PATH" diff --quiet 2>/dev/null || \
+       ! git -C "$WORKTREE_PATH" diff --cached --quiet 2>/dev/null; then
+        HAS_CHANGES=true
+    fi
+
+    CURRENT_SHA=$(git -C "$WORKTREE_PATH" rev-parse HEAD 2>/dev/null || echo "")
+
+    if [[ "$HAS_CHANGES" == "true" ]]; then
+        PHASE="implement"
+        PHASE_CONTEXT="
+PHASE: implement
+ACTION: Changes pending. When implementation complete, run /review before marking done."
+    elif [[ -z "$LAST_REVIEWED_SHA" ]] || [[ "$CURRENT_SHA" != "$LAST_REVIEWED_SHA" ]]; then
+        PHASE="review_pending"
+        PHASE_CONTEXT="
+PHASE: review_pending
+ACTION REQUIRED: Run /review before emitting <issue-complete>DONE</issue-complete>"
+    else
+        PHASE="reviewed"
+        PHASE_CONTEXT="
+PHASE: reviewed
+STATUS: Changes reviewed. Ready to complete if implementation is done."
+    fi
+
+    # Add agent awareness
+    PHASE_CONTEXT="$PHASE_CONTEXT
+
+AGENTS: If stuck on a design decision, consult idle:oracle. After changes, use /review or idle:reviewer."
 fi
 
 # Build continuation message
-REASON="[ITERATION $NEW_ITERATION/$MAX_ITERATIONS] Continue working on the task. Check your progress and either complete the task or keep iterating.$WORKTREE_CONTEXT"
+REASON="[ITERATION $NEW_ITERATION/$MAX_ITERATIONS] Continue working on the task. Check your progress and either complete the task or keep iterating.$WORKTREE_CONTEXT$PHASE_CONTEXT"
 
 # Escape for JSON
 ESCAPED_REASON=$(printf '%s' "$REASON" | jq -Rs '.')

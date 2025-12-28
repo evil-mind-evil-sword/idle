@@ -1,6 +1,16 @@
 {
-  "description": "idle plugin hooks - loops, safety, and recovery",
+  "description": "idle plugin hooks - loops, safety, recovery, and workflow guidance",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
