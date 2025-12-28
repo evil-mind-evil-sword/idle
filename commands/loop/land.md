@@ -32,7 +32,7 @@ Before landing:
    BRANCH="trivial/issue/$SAFE_ID"
    WORKTREE_PATH="$REPO_ROOT/.worktrees/trivial/$SAFE_ID"
 
-   if ! git worktree list | grep -qF "$WORKTREE_PATH"; then
+   if ! git worktree list | grep -qF -- "$WORKTREE_PATH"; then
        echo "Error: No worktree found for issue $ARGUMENTS"
        exit 1
    fi
