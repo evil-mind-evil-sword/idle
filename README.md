@@ -1,10 +1,14 @@
 # idle
 
-A Claude Code plugin for long-running agentic workflows with multi-model collaboration.
+**Agentic harness for Claude Code.** Long-running loops, multi-model consensus, message passing.
 
-Agents consult external models (Codex, Gemini) for "second opinions" to mitigate self-bias—but these are **optional**. When unavailable, agents fall back to `claude -p` which provides fresh context and still breaks the self-refinement loop.
+A runtime that orchestrates long-running autonomous workflows where agents collaborate through message passing and validate decisions via multi-model consensus.
 
-Inspired by AmpCode, Anthropic's research on agentic harnesses, and academic work on the self-bias problem in LLMs.
+## Why?
+
+- **Harness:** Provides a structured runtime that controls agent execution, manages worktrees, and handles state persistence across sessions.
+- **Loop:** Enables agents to break out of single-turn interactions, performing continuous iterative work until a task is objectively complete.
+- **Consensus:** Mitigates LLM self-bias and hallucinations by requiring agreement between distinct models (or fresh contexts) before committing to critical paths.
 
 ## Agents
 
@@ -18,18 +22,15 @@ Inspired by AmpCode, Anthropic's research on agentic harnesses, and academic wor
 
 ### How it works
 
-idle delegates tasks to the right model for the job: fast models (haiku) handle search, while powerful models (opus) tackle reasoning. For critical decisions, opus agents consult a "second opinion" to validate conclusions:
+idle acts as a harness that orchestrates specialized agents within a continuous loop. Fast agents handle information retrieval, while reasoning agents drive the core logic. To prevent error propagation, the harness enforces a consensus mechanism for high-stakes decisions.
 
-- **If codex/gemini installed**: Uses external model for maximum architectural diversity
-- **If not installed**: Falls back to `claude -p` which starts fresh context, still breaking self-bias
+When the primary agent proposes a critical action, the harness pauses execution to consult a secondary model. If an external model (Codex, Gemini) is available, it provides a truly independent perspective. If not, the harness falls back to `claude -p`, creating a fresh context to break the self-refinement loop. This ensures that the agentic loop proceeds only when there is consensus on the path forward.
 
-Either way, you get multi-perspective validation. External models are preferred for diversity, but the plugin works out of the box with just Claude.
+### Why Consensus?
 
-### Why Multi-Model?
-
-- **Self-Bias:** Single models favor their own outputs when self-evaluating. Cross-model review breaks this loop.
-- **Correlated Failures:** Different architectures have different blind spots—Claude, Codex, and Gemini together catch errors none would alone.
-- **Efficiency:** Fast models (haiku) handle bulk work; powerful models (opus) focus on high-leverage reasoning.
+- **Self-Bias:** Single models tend to validate their own errors when asked to double-check. Consensus forces an external review to break this validation loop.
+- **Correlated Failures:** Distinct model architectures have different blind spots. Consensus between Claude, Codex, and Gemini catches edge cases that a single model family might miss.
+- **Efficiency:** The harness routes simple tasks to faster models and reserves the expensive consensus process for complex reasoning steps, optimizing the loop for both speed and accuracy.
 
 See [docs/architecture.md](docs/architecture.md) for details.
 
