@@ -17,35 +17,51 @@ Generic iteration loop for any task (no issue tracker).
 - **Max iterations**: 10
 - **Stuck threshold**: 3 consecutive failures with no progress
 
+## How It Works
+
+This command uses a **Stop hook** to intercept Claude's exit and force re-entry until the task is complete. Loop state is stored via jwz messaging (with state file fallback).
+
+The hook checks for completion signals (`<loop-done>`) in the output to decide whether to continue or allow exit.
+
+## Setup
+
+Initialize loop state via jwz:
+```bash
+# Generate unique run ID
+RUN_ID="loop-$(date +%s)-$$"
+
+# Ensure jwz is initialized
+[ ! -d .jwz ] && jwz init
+
+# Create temp directory for prompt file
+STATE_DIR="/tmp/trivial-$RUN_ID"
+mkdir -p "$STATE_DIR"
+
+# Store prompt in file (avoids JSON escaping issues)
+cat > "$STATE_DIR/prompt.txt" << 'PROMPT'
+$ARGUMENTS
+PROMPT
+
+# Post initial state to jwz
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"loop\",\"iter\":1,\"max\":10,\"prompt_file\":\"$STATE_DIR/prompt.txt\"}]}"
+
+# Announce start
+jwz post "project:$(basename $PWD)" -m "[loop] STARTED: $ARGUMENTS"
+```
+
 ## Workflow
 
 1. Work on the task incrementally
 2. Run `/test` after significant changes
 3. On success: output `<loop-done>COMPLETE</loop-done>`
-4. On failure: analyze, fix, retry (up to limit)
-
-## Session State
-
-Use a unique session ID to avoid conflicts:
-```bash
-# Generate session ID if not set
-SID="${TRIVIAL_SESSION_ID:-$(date +%s)-$$}"
-
-# Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
-SID=$(printf '%s' "$SID" | tr -cd 'a-zA-Z0-9_-')
-[[ -z "$SID" ]] && SID="$(date +%s)-$$"
-
-export TRIVIAL_SESSION_ID="$SID"
-STATE_DIR="/tmp/trivial-$SID"
-mkdir -p "$STATE_DIR"
-```
+4. On failure: analyze, fix, retry (the stop hook will re-inject the prompt)
 
 ## Iteration Tracking
 
-Track your iteration count:
+The stop hook increments the iteration counter automatically. Check current iteration:
 ```bash
-ITER=$(($(cat "$STATE_DIR/iter" 2>/dev/null || echo 0) + 1))
-echo "$ITER" > "$STATE_DIR/iter"
+jwz read "loop:current" | tail -1 | jq -r '.stack[-1].iter'
 ```
 
 Before each retry:
@@ -71,10 +87,9 @@ Report what was accomplished and what remains.
 ```
 Describe the blocker and ask for user guidance.
 
-## Cleanup
+## Escape Hatches
 
-On completion (any outcome):
-```bash
-rm -rf "$STATE_DIR"
-unset TRIVIAL_SESSION_ID
-```
+If you get stuck in an infinite loop:
+1. `/cancel-loop` - Graceful cancellation
+2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
+3. Delete `.jwz/` directory - Manual reset

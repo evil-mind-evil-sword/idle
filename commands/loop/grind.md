@@ -20,31 +20,36 @@ Filter examples: `repl`, `epic:slop2-abc`, `priority:1`
 - **Per-issue limit**: Inherited from `/issue` (10 iterations)
 - **Max review iterations per issue**: 3
 
-## Session State
+## How It Works
 
-```bash
-# Generate unique session ID
-SID="${TRIVIAL_SESSION_ID:-$(date +%s)-$$}"
+This command uses a **Stop hook** to intercept Claude's exit and force re-entry until all issues are processed. Loop state is stored via jwz messaging.
 
-# Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
-SID=$(printf '%s' "$SID" | tr -cd 'a-zA-Z0-9_-')
-[[ -z "$SID" ]] && SID="$(date +%s)-$$"
-
-export TRIVIAL_SESSION_ID="$SID"
-STATE_DIR="/tmp/trivial-$SID"
-mkdir -p "$STATE_DIR"
-```
+Grind pushes a frame onto the loop stack. When it calls `/issue`, that pushes another frame. When issue completes, its frame is popped and grind continues.
 
 ## Setup
 
+Initialize loop state via jwz:
 ```bash
-echo "grind" > "$STATE_DIR/mode"
-echo "$ARGUMENTS" > "$STATE_DIR/context"
+# Generate unique run ID
+RUN_ID="grind-$(date +%s)-$$"
+
+# Ensure jwz is initialized
+[ ! -d .jwz ] && jwz init
+
+# Create temp directory for prompt/state
+STATE_DIR="/tmp/trivial-$RUN_ID"
+mkdir -p "$STATE_DIR"
+
+# Store filter as prompt
+echo "$ARGUMENTS" > "$STATE_DIR/prompt.txt"
 echo "0" > "$STATE_DIR/count"
 
-# Initialize messaging and announce session
-[ ! -d .jwz ] && jwz init
-jwz post "project:$(basename $PWD)" -m "[grind] STARTED: Session $SID with filter: $ARGUMENTS"
+# Post initial state to jwz
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"grind\",\"iter\":1,\"max\":100,\"prompt_file\":\"$STATE_DIR/prompt.txt\",\"filter\":\"$ARGUMENTS\"}]}"
+
+# Announce session start
+jwz post "project:$(basename $PWD)" -m "[grind] STARTED: Session $RUN_ID with filter: $ARGUMENTS"
 ```
 
 ## Messaging
@@ -59,6 +64,7 @@ jwz post "issue:$ISSUE_ID" -m "[grind] WORKING: Starting issue"
 jwz post "issue:$ISSUE_ID" -m "[grind] DONE: Completed - see commit $(git rev-parse --short HEAD)"
 
 # On grind complete
+COUNT=$(cat "$STATE_DIR/count")
 jwz post "project:$(basename $PWD)" -m "[grind] COMPLETE: $COUNT issues processed"
 ```
 
@@ -70,6 +76,7 @@ Repeat until limit or no issues:
    ```bash
    COUNT=$(cat "$STATE_DIR/count")
    if [ "$COUNT" -ge 100 ]; then
+     jwz post "project:$(basename $PWD)" -m "[grind] DONE: Hit max issues limit"
      echo "<grind-done>MAX_ISSUES</grind-done>"
      exit
    fi
@@ -131,9 +138,9 @@ Report: X issues completed, Y remaining.
 
 **User cancelled**: `/cancel-loop`
 
-## Cleanup
+## Escape Hatches
 
-```bash
-rm -rf "$STATE_DIR"
-unset TRIVIAL_SESSION_ID
-```
+If you get stuck in an infinite loop:
+1. `/cancel-loop` - Graceful cancellation
+2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
+3. Delete `.jwz/` directory - Manual reset

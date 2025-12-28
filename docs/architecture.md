@@ -38,13 +38,13 @@ trivial/
 │   ├── librarian.md
 │   ├── oracle.md
 │   ├── documenter.md
-│   ├── reviewer.md
+│   └── reviewer.md
 ├── commands/            # Command definitions
 │   ├── dev/
 │   │   ├── commit.md
 │   │   ├── document.md
 │   │   ├── fmt.md
-│   │   ├── plan.md
+│   │   ├── message.md
 │   │   ├── review.md
 │   │   ├── test.md
 │   │   └── work.md
@@ -53,6 +53,9 @@ trivial/
 │       ├── grind.md
 │       ├── issue.md
 │       └── loop.md
+├── hooks/               # Claude Code hooks
+│   ├── hooks.json       # Hook configuration
+│   └── stop-hook.sh     # Loop continuation logic
 └── docs/
     └── architecture.md
 ```
@@ -143,41 +146,79 @@ Commands are user-invocable via `/trivial:dev:command` or `/trivial:loop:command
 
 ## Loop State Management
 
-Loop commands (`/loop`, `/grind`, `/issue`) maintain state across iterations:
+Loop commands (`/loop`, `/grind`, `/issue`) use a **Stop hook** to intercept Claude's exit and force re-entry until the task is complete.
 
-### Session State
+### How It Works
 
-```bash
-# Unique session ID prevents conflicts
-SID="${TRIVIAL_SESSION_ID:-$(date +%s)-$$}"
-
-# Sanitize: only allow alphanumeric, dash, underscore (prevent path traversal)
-SID=$(printf '%s' "$SID" | tr -cd 'a-zA-Z0-9_-')
-[[ -z "$SID" ]] && SID="$(date +%s)-$$"
-
-export TRIVIAL_SESSION_ID="$SID"
-STATE_DIR="/tmp/trivial-$SID"
-mkdir -p "$STATE_DIR"
+```
+User runs /loop "fix tests"
+         ↓
+Command posts state to jwz topic "loop:current"
+         ↓
+Claude works on task, tries to exit
+         ↓
+Stop hook intercepts exit
+         ↓
+Hook reads state from jwz, checks for completion signals
+         ↓
+If <loop-done> found → allow exit
+If not found → block exit, re-inject prompt, increment iteration
 ```
 
-### State Files
+### State Storage via jwz
 
-| File | Purpose |
-|------|---------|
-| `$STATE_DIR/mode` | Current mode (`grind`, `issue`, `loop`) |
-| `$STATE_DIR/count` | Issues completed (grind) |
-| `$STATE_DIR/iter` | Iteration count |
-| `$STATE_DIR/context` | Filter/arguments |
+Loop state is stored as JSON messages in the `loop:current` topic:
+
+```json
+{
+  "schema": 1,
+  "event": "STATE",
+  "run_id": "loop-1703123456-12345",
+  "updated_at": "2024-12-21T10:30:00Z",
+  "stack": [
+    {
+      "id": "grind-1703123456-12345",
+      "mode": "grind",
+      "iter": 3,
+      "max": 100,
+      "prompt_file": "/tmp/trivial-grind-xxx/prompt.txt"
+    },
+    {
+      "id": "issue-auth-123-1703123456",
+      "mode": "issue",
+      "iter": 2,
+      "max": 10,
+      "prompt_file": "/tmp/trivial-issue-xxx/prompt.txt",
+      "issue_id": "auth-123"
+    }
+  ]
+}
+```
+
+Key design choices:
+- **Stack model**: Supports nested loops (grind → issue). Top of stack is current loop.
+- **`prompt_file`**: Prompts stored in temp files to avoid JSON escaping issues.
+- **TTL**: States older than 2 hours are considered stale (prevents zombie loops).
+- **Fallback**: If jwz unavailable, falls back to `.claude/trivial-loop.local.md` state file.
 
 ### Completion Signals
 
-Commands emit structured signals for loop control:
+Commands emit structured signals that the stop hook detects:
 
 - `<loop-done>COMPLETE</loop-done>` - Task finished successfully
 - `<loop-done>MAX_ITERATIONS</loop-done>` - Hit iteration limit
 - `<loop-done>STUCK</loop-done>` - No progress, needs user input
 - `<issue-complete>DONE</issue-complete>` - Single issue finished
 - `<grind-done>NO_MORE_ISSUES</grind-done>` - Backlog cleared
+- `<grind-done>MAX_ISSUES</grind-done>` - Session limit reached
+
+### Escape Hatches
+
+If you get stuck in an infinite loop:
+
+1. `/cancel-loop` - Graceful cancellation via command
+2. `TRIVIAL_LOOP_DISABLE=1 claude` - Environment variable bypass
+3. `rm -rf .jwz/` - Manual reset of all messaging state
 
 ## External Model Integration
 

@@ -1,0 +1,11 @@
+{
+  "description": "trivial plugin hooks for self-referential loop commands",
+  "hooks": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
+      }
+    ]
+  }
+}

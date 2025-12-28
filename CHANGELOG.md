@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-12-27
+
+### Added
+
+- **Stop hook for loop commands** - Self-referential iteration via Claude Code hooks
+- `hooks/hooks.json` and `hooks/stop-hook.sh` for loop continuation logic
+- Loop state stored via jwz messaging (`loop:current` topic) with JSON schema
+- Stack-based nested loop model (grind → issue)
+- TTL-based staleness detection (2 hour timeout prevents zombie loops)
+- Environment variable escape hatch: `TRIVIAL_LOOP_DISABLE=1`
+
+### Changed
+
+- Loop commands (`/loop`, `/issue`, `/grind`) now use jwz for state management
+- `/cancel-loop` posts ABORT event to jwz and cleans up gracefully
+- Removed planner agent in favor of oracle
+- Prompts stored in temp files to avoid JSON escaping issues
+
+### Fixed
+
+- Loop commands now actually loop (previously just documented the pattern)
+
 ## [0.5.0] - 2025-12-27
 
 ### Added
