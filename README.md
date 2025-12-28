@@ -1,6 +1,6 @@
 # idle
 
-**An opinionated paint job for Claude Code.** Long-running loops, multi-model consensus, message passing.
+**An opinionated outer harness for Claude Code.** Long-running loops, multi-model consensus, message passing.
 
 A runtime that orchestrates long-running autonomous workflows where agents collaborate through message passing and validate decisions via multi-model consensus.
 
