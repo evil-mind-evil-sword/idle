@@ -4,5 +4,6 @@
   "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
   "author": {
     "name": "femtomc"
-  }
+  },
+  "hooks": "./hooks/hooks.json"
 }
