@@ -3,8 +3,12 @@
   "hooks": {
     "Stop": [
       {
-        "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -20,8 +24,12 @@
     ],
     "PreCompact": [
       {
-        "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact-hook.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact-hook.sh"
+          }
+        ]
       }
     ]
   }
