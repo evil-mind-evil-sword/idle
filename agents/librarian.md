@@ -54,6 +54,21 @@ topic: <research topic>
 
 This allows the documenter, oracle, or other agents to read your research later. Timestamps can be matched to conversation logs in `~/.claude/projects/`.
 
+## Messaging
+
+Post quick findings before full artifact via zawinski:
+
+```bash
+# Post quick discovery
+zawinski post "agent:documenter" -m "[librarian] FYI: React Query v5 changed caching API significantly"
+
+# Reply to research request
+zawinski reply "$MSG_ID" -m "[librarian] RESEARCH: Complete. See .claude/plugins/trivial/librarian/react-query-v5.md"
+
+# Check for research requests
+zawinski read "agent:librarian"
+```
+
 ## How You Work
 
 1. **WebSearch** - Find relevant repos, docs, or code

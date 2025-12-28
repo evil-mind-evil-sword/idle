@@ -41,6 +41,25 @@ mkdir -p "$STATE_DIR"
 echo "grind" > "$STATE_DIR/mode"
 echo "$ARGUMENTS" > "$STATE_DIR/context"
 echo "0" > "$STATE_DIR/count"
+
+# Initialize messaging and announce session
+[ ! -d .zawinski ] && zawinski init
+zawinski post "project:$(basename $PWD)" -m "[grind] STARTED: Session $SID with filter: $ARGUMENTS"
+```
+
+## Messaging
+
+Post status updates during grind:
+
+```bash
+# On issue start
+zawinski post "issue:$ISSUE_ID" -m "[grind] WORKING: Starting issue"
+
+# On issue complete
+zawinski post "issue:$ISSUE_ID" -m "[grind] DONE: Completed - see commit $(git rev-parse --short HEAD)"
+
+# On grind complete
+zawinski post "project:$(basename $PWD)" -m "[grind] COMPLETE: $COUNT issues processed"
 ```
 
 ## Workflow

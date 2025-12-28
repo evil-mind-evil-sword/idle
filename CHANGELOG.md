@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-27
+
+### Added
+
+- **Zawinski messaging integration** - Async topic-based messaging between agents
+- `/message` command for posting and reading messages
+- Messaging sections in all opus agents (oracle, reviewer, planner, documenter) and librarian
+- Message status updates in `/grind` and `/issue` loop commands
+- Topic naming convention: `project:`, `issue:`, `agent:`
+
+### Changed
+
+- Zawinski is now a required dependency (like tissue)
+- Updated install.sh to install zawinski
+- Updated docs/architecture.md with messaging documentation
+- Updated CONTRIBUTING.md with messaging guidelines
+
 ## [0.4.1] - 2025-12-27
 
 ### Fixed

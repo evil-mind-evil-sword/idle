@@ -83,6 +83,32 @@ See `commands/dev/fmt.md` for a simple example or `commands/loop/grind.md` for a
 - Be explicit about constraints (what the agent MUST NOT do)
 - Include concrete examples in workflows
 
+## Messaging Guidelines
+
+Agents communicate via zawinski messaging:
+
+- **Messages** are for quick status updates and notes
+- **Artifacts** (`.claude/plugins/trivial/{agent}/`) are for polished outputs
+
+### Topic Naming
+
+| Pattern | Purpose |
+|---------|---------|
+| `project:<name>` | Project-wide announcements |
+| `issue:<id>` | Per-issue discussion |
+| `agent:<name>` | Direct agent communication |
+
+### Message Format
+
+```
+[agent] ACTION: description
+
+Examples:
+[planner] STARTED: Breaking down auth feature
+[oracle] FINDING: Race condition in handler.go:45
+[reviewer] BLOCKING: Security issue in token validation
+```
+
 ## Testing
 
 trivial doesn't have automated tests. Manual testing workflow:

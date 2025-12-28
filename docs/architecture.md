@@ -219,6 +219,59 @@ STRUCTURE: [EXPECTED SECTIONS]"
 
 The documenter reviews Gemini's output, sends corrections, and iterates until satisfied.
 
+## Agent Messaging
+
+Agents communicate asynchronously via [zawinski](https://github.com/femtomc/zawinski), a topic-based messaging CLI.
+
+### Topic Naming Convention
+
+| Pattern | Example | Purpose |
+|---------|---------|---------|
+| `project:<name>` | `project:trivial` | Project-wide announcements |
+| `issue:<id>` | `issue:auth-123` | Per-issue discussion |
+| `agent:<name>` | `agent:oracle` | Direct agent communication |
+
+### Commands
+
+```bash
+# Initialize (once per project)
+zawinski init
+
+# Create topic and post
+zawinski topic new "issue:auth-123"
+zawinski post "issue:auth-123" -m "[planner] STARTED: Breaking down auth feature"
+
+# Read and reply
+zawinski read "issue:auth-123"
+zawinski reply <msg-id> -m "[oracle] FINDING: Race condition in handler.go:45"
+
+# Search across all messages
+zawinski search "security"
+```
+
+### Message Format
+
+```
+[AGENT] ACTION: description
+
+Examples:
+[planner] STARTED: Breaking down auth feature
+[oracle] FINDING: Race condition in handler.go:45
+[reviewer] BLOCKING: Security issue in token validation
+[librarian] RESEARCH: API deprecated in v3
+```
+
+### Messaging vs Artifacts
+
+| Use Case | Mechanism | Location |
+|----------|-----------|----------|
+| Quick status update | Message | `.zawinski/` |
+| Research finding (quick) | Message | `.zawinski/` |
+| Research finding (full) | Artifact | `.claude/plugins/trivial/{agent}/` |
+| Design decision | Artifact + message | Both |
+
+Messages are ephemeral notes; artifacts are durable references.
+
 ## Adding New Agents
 
 1. Create `agents/your-agent.md`
@@ -240,8 +293,14 @@ The command becomes available as `/trivial:category:your-command`.
 
 ## Dependencies
 
+### Required
+
 - [tissue](https://github.com/femtomc/tissue) - Local issue tracker for `/work`, `/grind`, `/issue`
-- [codex](https://github.com/openai/codex) - OpenAI CLI for oracle/reviewer/planner
-- [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google CLI for documenter
+- [zawinski](https://github.com/femtomc/zawinski) - Async messaging for agent communication
 - [uv](https://github.com/astral-sh/uv) - Python package runner for `scripts/search.py`
 - [gh](https://cli.github.com/) - GitHub CLI for librarian agent
+
+### Optional
+
+- [codex](https://github.com/openai/codex) - OpenAI CLI for oracle/reviewer/planner (falls back to `claude -p`)
+- [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google CLI for documenter (falls back to `claude -p`)

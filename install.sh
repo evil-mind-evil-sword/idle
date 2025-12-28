@@ -94,6 +94,21 @@ install_tissue() {
     fi
 }
 
+install_zawinski() {
+    if check_command zawinski; then
+        success "zawinski already installed"
+        return
+    fi
+    info "Installing zawinski (async messaging)..."
+    if check_command cargo; then
+        cargo install --git https://github.com/femtomc/zawinski zawinski
+        success "zawinski installed"
+    else
+        warn "Rust/Cargo not found. Install from https://rustup.rs/ then run:"
+        warn "  cargo install --git https://github.com/femtomc/zawinski zawinski"
+    fi
+}
+
 check_optional_deps() {
     echo ""
     info "Checking optional dependencies for enhanced multi-model support..."
@@ -128,6 +143,7 @@ main() {
     install_uv
     install_gh
     install_tissue
+    install_zawinski
 
     # Optional dependencies (just check, don't install)
     check_optional_deps
@@ -144,9 +160,10 @@ main() {
     echo ""
     echo "Then start using trivial:"
     echo ""
-    echo "  ${BLUE}tissue init${NC}     # Initialize issue tracker"
-    echo "  ${BLUE}/grind${NC}          # Work through issues"
-    echo "  ${BLUE}/review${NC}         # Code review"
+    echo "  ${BLUE}tissue init${NC}      # Initialize issue tracker"
+    echo "  ${BLUE}zawinski init${NC}    # Initialize messaging"
+    echo "  ${BLUE}/grind${NC}           # Work through issues"
+    echo "  ${BLUE}/review${NC}          # Code review"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }

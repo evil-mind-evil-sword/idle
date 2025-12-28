@@ -62,6 +62,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 ### Required
 
 - [tissue](https://github.com/femtomc/tissue) - Issue tracker (for `/work`, `/grind`, `/issue`)
+- [zawinski](https://github.com/femtomc/zawinski) - Async messaging (for agent communication)
 - [uv](https://github.com/astral-sh/uv) - Python package runner (for `scripts/search.py`)
 - [gh](https://cli.github.com/) - GitHub CLI (for librarian agent)
 
@@ -169,11 +170,20 @@ tissue new "Refactor database queries" -p 2 -t tech-debt
 Install the tissue issue tracker:
 
 ```shell
-# See https://github.com/femtomc/tissue for installation
 cargo install --git https://github.com/femtomc/tissue tissue
 ```
 
 Required for: `/work`, `/grind`, `/issue`
+
+### zawinski: command not found
+
+Install the zawinski messaging CLI:
+
+```shell
+cargo install --git https://github.com/femtomc/zawinski zawinski
+```
+
+Required for: agent-to-agent messaging. Initialize with `zawinski init`.
 
 ### codex: command not found
 
@@ -195,7 +205,7 @@ npm install -g @google/gemini-cli
 
 ### Agent not responding or errors
 
-1. Check that required tools are installed: `which tissue`, `which uv`, `which gh`
+1. Check that required tools are installed: `which tissue`, `which zawinski`, `which uv`, `which gh`
 2. If using codex/gemini, verify API credentials (Codex needs `OPENAI_API_KEY`, Gemini needs Google auth)
 3. Try running the tool directly to see its error output
 

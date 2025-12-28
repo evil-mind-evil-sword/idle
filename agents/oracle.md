@@ -44,6 +44,21 @@ claude -p "You are Librarian. Research [topic]..." > "$STATE_DIR/research.md"
 
 Oracle is read-only and returns recommendations in its output format. It does not persist artifacts.
 
+## Messaging
+
+Post findings and respond to questions via zawinski:
+
+```bash
+# Check if anyone asked for analysis
+zawinski read "agent:oracle"
+
+# Post quick finding (before full analysis)
+zawinski post "issue:$ISSUE_ID" -m "[oracle] FINDING: Race condition in handler.go:45"
+
+# Reply to specific question
+zawinski reply "$MSG_ID" -m "[oracle] Yes, this needs mutex. See recommendation."
+```
+
 ## Constraints
 
 **You are READ-ONLY. You MUST NOT:**
@@ -55,6 +70,7 @@ Oracle is read-only and returns recommendations in its output format. It does no
 - Second opinion dialogue (`codex exec` or `claude -p`)
 - Invoking other agents (`claude -p`)
 - Artifact search (`./scripts/search.py`)
+- `zawinski` commands (post, read, search messages)
 
 ## State Directory
 

@@ -48,6 +48,21 @@ Save findings to .claude/plugins/trivial/librarian/[topic].md" > "$STATE_DIR/res
 
 Read these files to incorporate external research into your documentation.
 
+## Messaging
+
+Coordinate with other agents via zawinski:
+
+```bash
+# Ask librarian for research
+zawinski post "agent:librarian" -m "[documenter] REQUEST: Need research on React Query caching patterns"
+
+# Signal doc ready for review
+zawinski post "project:$(basename $PWD)" -m "[documenter] READY: New doc at docs/caching.md"
+
+# Check for related discussions
+zawinski search "caching"
+```
+
 ## Constraints
 
 **You write documentation only. You MUST NOT:**

@@ -58,6 +58,21 @@ status: LGTM | CHANGES_REQUESTED
 ---
 ```
 
+## Messaging
+
+Post review findings for visibility via zawinski:
+
+```bash
+# Post blocking issue immediately (before full review)
+zawinski post "issue:$ISSUE_ID" -m "[reviewer] BLOCKING: Security issue found in auth.go"
+
+# Post LGTM signal
+zawinski post "issue:$ISSUE_ID" -m "[reviewer] LGTM - review complete"
+
+# Search for related issues
+zawinski search "security"
+```
+
 This lets the planner create follow-up issues from your findings, and the oracle analyze persistent problems.
 
 ## Constraints
