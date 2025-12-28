@@ -21,7 +21,7 @@ User → Claude Code → trivial agents/commands
 ```
 
 - **Haiku agents** (`explorer`, `librarian`): Fast, cheap operations like file search
-- **Opus agents** (`oracle`, `reviewer`, `planner`, `documenter`): Complex reasoning tasks
+- **Opus agents** (`oracle`, `reviewer`, `documenter`): Complex reasoning tasks
 - **External model integration**: Codex for diverse perspectives, Gemini for writing
 
 ## Plugin Configuration
@@ -39,7 +39,6 @@ trivial/
 │   ├── oracle.md
 │   ├── documenter.md
 │   ├── reviewer.md
-│   └── planner.md
 ├── commands/            # Command definitions
 │   ├── dev/
 │   │   ├── commit.md
@@ -118,9 +117,6 @@ Expected response structure
 - Writes review artifacts to `.claude/plugins/trivial/reviewer/`
 - Read-only access to source code
 
-**Issue tracker access** (planner):
-- Full access to `tissue` commands for issue management
-- Read-only access to code and artifacts
 
 ## Command Structure
 
@@ -187,7 +183,7 @@ Commands emit structured signals for loop control:
 
 ### Codex (OpenAI)
 
-Used by: `oracle`, `reviewer`, `planner`
+Used by: `oracle`, `reviewer`
 
 Pattern: Dialogue-based consultation
 
@@ -239,7 +235,7 @@ jwz init
 
 # Create topic and post
 jwz topic new "issue:auth-123"
-jwz post "issue:auth-123" -m "[planner] STARTED: Breaking down auth feature"
+jwz post "issue:auth-123" -m "[oracle] STARTED: Analyzing auth feature"
 
 # Read and reply
 jwz read "issue:auth-123"
@@ -255,7 +251,7 @@ jwz search "security"
 [AGENT] ACTION: description
 
 Examples:
-[planner] STARTED: Breaking down auth feature
+[oracle] STARTED: Analyzing auth feature
 [oracle] FINDING: Race condition in handler.go:45
 [reviewer] BLOCKING: Security issue in token validation
 [librarian] RESEARCH: API deprecated in v3
@@ -302,5 +298,5 @@ The command becomes available as `/trivial:category:your-command`.
 
 ### Optional
 
-- [codex](https://github.com/openai/codex) - OpenAI CLI for oracle/reviewer/planner (falls back to `claude -p`)
+- [codex](https://github.com/openai/codex) - OpenAI CLI for oracle/reviewer (falls back to `claude -p`)
 - [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google CLI for documenter (falls back to `claude -p`)

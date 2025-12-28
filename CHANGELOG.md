@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Zawinski messaging integration** - Async topic-based messaging between agents (`jwz` CLI)
 - `/message` command for posting and reading messages
-- Messaging sections in all opus agents (oracle, reviewer, planner, documenter) and librarian
+- Messaging sections in all opus agents (oracle, reviewer, documenter) and librarian
 - Message status updates in `/grind` and `/issue` loop commands
 - Topic naming convention: `project:`, `issue:`, `agent:`
 
@@ -32,8 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security**: Use `printf` instead of `echo` to handle edge case session IDs
 - **Security**: Quote `$ARGUMENTS` in tissue commands to prevent word splitting
 - **Security**: Add error handling for file reads in `scripts/search.py`
-- Documentation: Remove incorrect `oracle/*.md` reference from planner (oracle is read-only)
-- Documentation: Fix agent categorization in architecture.md (separate reviewer/planner roles)
+- Documentation: Fix agent categorization in architecture.md
 - Documentation: Remove oracle from artifact writers list in CHANGELOG
 
 ## [0.4.0] - 2025-12-27
@@ -43,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/search.py` - BM25 search over agent artifacts (uses `uv run`)
 - Inter-agent communication via `.claude/plugins/trivial/{agent}/` directories
 - YAML frontmatter metadata in artifacts for conversation cross-referencing
-- Search capability documented in all reading agents (oracle, planner, reviewer, documenter)
+- Search capability documented in all reading agents (oracle, reviewer, documenter)
 
 ### Changed
 
@@ -63,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `oracle`, `reviewer`, `planner` agents now log full Codex output to temp files
+- `oracle`, `reviewer` agents now log full Codex output to temp files
 - `documenter` agent now logs full Gemini output to temp files
 - Only summary/document sections returned to agent context (reduces bloat)
 - YAML frontmatter added to all command files
@@ -73,7 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README: Corrected gemini-cli package name (`@google/gemini-cli`)
 - docs/architecture.md: Updated version to match plugin.json
 - docs/architecture.md: Added document.md to directory structure
-- agents/planner.md: Fixed tissue commands (`new` not `create`, `dep add`, `tag add`)
 - agents/reviewer.md, commands/dev/review.md: Fixed style guide path reference
 
 ## [0.2.0] - 2025-12-27
@@ -105,14 +103,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `oracle` - Deep reasoning with Codex dialogue (opus)
   - `documenter` - Technical writing with Gemini 3 Flash (opus)
   - `reviewer` - Code review with Codex dialogue (opus)
-  - `planner` - Design and issue tracker curation with Codex (opus)
 
 - **Dev Commands**
   - `/work` - Pick an issue and work it to completion
   - `/fmt` - Auto-detect and run project formatter
   - `/test` - Auto-detect and run project tests
   - `/review` - Run code review via reviewer agent
-  - `/plan` - Design discussion or backlog curation via planner agent
   - `/commit` - Commit staged changes with generated message
 
 - **Loop Commands**

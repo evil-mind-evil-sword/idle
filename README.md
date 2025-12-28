@@ -15,7 +15,6 @@ Inspired by AmpCode, Anthropic's research on agentic harnesses, and academic wor
 | `oracle` | opus | codex or claude | Deep reasoning with external dialogue |
 | `documenter` | opus | gemini or claude | Technical writing with external writer |
 | `reviewer` | opus | codex or claude | Code review with external dialogue |
-| `planner` | opus | codex or claude | Design and issue tracker curation |
 
 ### How it works
 
@@ -45,7 +44,6 @@ See [docs/architecture.md](docs/architecture.md) for details.
 | `/test` | Auto-detect and run project tests |
 | `/review` | Run code review via reviewer agent |
 | `/document` | Write technical docs via documenter agent |
-| `/plan` | Design discussion or backlog curation via planner agent |
 | `/commit` | Commit staged changes with generated message |
 
 ### Loop Commands
@@ -68,7 +66,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 ### Optional (for enhanced multi-model diversity)
 
-- [codex](https://github.com/openai/codex) - OpenAI coding agent → used by oracle/reviewer/planner
+- [codex](https://github.com/openai/codex) - OpenAI coding agent → used by oracle/reviewer
 - [gemini-cli](https://github.com/google-gemini/gemini-cli) - Google Gemini CLI → used by documenter
 
 When these are not installed, agents fall back to `claude -p` for second opinions.
@@ -102,7 +100,6 @@ A typical workflow with trivial:
 
 ```shell
 # 1. Plan your work
-/plan Break down the authentication feature
 
 # 2. Work an issue (runs test, fmt, review, commit automatically)
 /issue auth-1abc2def

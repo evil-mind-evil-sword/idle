@@ -104,7 +104,7 @@ Agents communicate via zawinski messaging (`jwz` CLI):
 [agent] ACTION: description
 
 Examples:
-[planner] STARTED: Breaking down auth feature
+[oracle] STARTED: Analyzing auth feature
 [oracle] FINDING: Race condition in handler.go:45
 [reviewer] BLOCKING: Security issue in token validation
 ```

@@ -73,7 +73,7 @@ jwz post "issue:$ISSUE_ID" -m "[reviewer] LGTM - review complete"
 jwz search "security"
 ```
 
-This lets the planner create follow-up issues from your findings, and the oracle analyze persistent problems.
+This lets the oracle analyze persistent problems and other agents coordinate on fixes.
 
 ## Constraints
 

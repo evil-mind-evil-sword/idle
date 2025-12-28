@@ -115,7 +115,7 @@ check_optional_deps() {
     echo ""
 
     if check_command codex; then
-        success "codex found - oracle/reviewer/planner will use OpenAI for diverse perspectives"
+        success "codex found - oracle/reviewer will use OpenAI for diverse perspectives"
     else
         info "codex not found - agents will use Claude for second opinions"
         echo "    To enable OpenAI diversity: npm install -g @openai/codex"
