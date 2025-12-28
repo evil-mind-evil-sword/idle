@@ -29,6 +29,27 @@ release_lock() {
 # Ensure lock is released on any exit (signal or script failure)
 trap 'release_lock' EXIT
 
+
+# Helper function to emit trace events
+emit_trace_event() {
+    [[ "${IDLE_TRACE:-}" != "1" ]] && return
+    local event="$1"
+    local details="${2:-{}}"
+    local event_id="${RUN_ID:-unknown-$$}-${event}-${ITERATION:-0}"
+    local ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    if ! command -v jwz >/dev/null 2>&1; then
+        return
+    fi
+
+    # Create topic if it doesn't exist
+    jwz topic new "loop:trace" 2>/dev/null || true
+
+    # Build and emit event JSON
+    local event_json="{\"event_id\":\"$event_id\",\"ts\":\"$ts\",\"run_id\":\"${RUN_ID:-}\",\"loop_kind\":\"${MODE:-}\",\"event\":\"$event\",\"iteration\":${ITERATION:-0},\"max\":${MAX_ITERATIONS:-0},\"details\":$details}"
+    jwz post "loop:trace" -m "$event_json" 2>/dev/null || true
+}
+
 # Read hook input from stdin
 INPUT=$(cat)
 
@@ -88,6 +109,7 @@ if [[ -n "$STATE" ]] && echo "$STATE" | jq -e '.schema' >/dev/null 2>&1; then
         AGE=$((NOW_TS - UPDATED_TS))
         if [[ $AGE -gt 7200 ]]; then
             echo "Warning: Loop state is stale ($AGE seconds old), allowing exit" >&2
+            emit_trace_event "STALENESS" "{\"age\":$AGE}"
             exit 0
         fi
     fi
@@ -106,6 +128,11 @@ if [[ -n "$STATE" ]] && echo "$STATE" | jq -e '.schema' >/dev/null 2>&1; then
     ISSUE_ID=$(echo "$TOP" | jq -r '.issue_id // empty')
 
     USE_JWZ=true
+
+    # Emit LOOP_START on first iteration
+    if [[ "$ITERATION" -eq 0 ]]; then
+        emit_trace_event "LOOP_START"
+    fi
 else
     # Fallback to state file
     if [[ ! -f "$STATE_FILE" ]]; then
@@ -130,11 +157,17 @@ else
     PROMPT_FILE=""
 
     USE_JWZ=false
+
+    # Emit LOOP_START on first iteration (fallback path)
+    if [[ "$ITERATION" -eq 0 ]]; then
+        emit_trace_event "LOOP_START"
+    fi
 fi
 
 # Validate numeric values
 if ! [[ "$ITERATION" =~ ^[0-9]+$ ]] || ! [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
     echo "Warning: Corrupted loop state, cleaning up" >&2
+    emit_trace_event "ABORT" "{\"reason\":\"corrupted_state\"}"
     if [[ "$USE_JWZ" == "true" ]]; then
         # Acquire lock before writing state
         if acquire_lock; then
@@ -149,6 +182,7 @@ fi
 
 # Check if max iterations reached
 if [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
+    emit_trace_event "MAX_ITERATIONS"
     if [[ "$USE_JWZ" == "true" ]]; then
         # Acquire lock before writing state
         if acquire_lock; then
@@ -216,6 +250,7 @@ fi
 
 # If completion signal found, clean up and allow exit
 if [[ "$COMPLETION_FOUND" == "true" ]]; then
+    emit_trace_event "COMPLETION" "{\"reason\":\"$COMPLETION_REASON\"}"
     if [[ "$USE_JWZ" == "true" ]]; then
         # Acquire lock before modifying state
         if acquire_lock; then
@@ -255,10 +290,12 @@ if [[ "$USE_JWZ" == "true" ]]; then
         jwz post "loop:current" -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$NOW\",\"stack\":$(echo "$NEW_STACK" | jq -c '.stack')}"
         release_lock
     fi
+    emit_trace_event "ITERATION"
 else
     # Update state file (atomic via temp + mv)
     TEMP_FILE=$(mktemp)
     sed "s/^iteration: .*/iteration: $NEW_ITERATION/" "$STATE_FILE" > "$TEMP_FILE"
+    emit_trace_event "ITERATION"
     mv "$TEMP_FILE" "$STATE_FILE"
 fi
 
