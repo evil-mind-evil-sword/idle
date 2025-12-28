@@ -1,9 +1,8 @@
 {
   "name": "idle",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
   "author": {
     "name": "femtomc"
-  },
-  "hooks": "./hooks/hooks.json"
+  }
 }
