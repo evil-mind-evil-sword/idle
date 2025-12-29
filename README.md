@@ -2,10 +2,18 @@
 
 **An opinionated outer harness for Claude Code.** Long-running loops, multi-model consensus, message passing.
 
-A runtime that orchestrates long-running autonomous workflows where agents collaborate through message passing and validate decisions via multi-model consensus.
+`idle` is a (very) opinionated plugin for Claude Code (CC) that overloads several of CC's native points of extension (subagents, hooks, etc) so that one may usefully use
+CC for long running, open ended tasks.
+
+Note: `idle` will likely break other plugins that you may be using with Claude Code (especially if they define their own hooks). It's kind of a "batteries included" plugin.
 
 ## Why?
 
+I dream of freeing myself from careful and methodical curation of my Claude Code sessions. Much of my time spent manually moving context around, manually saving context, manually directing Claude to do tasks.
+
+This plugin bundles together an issue tracker, a message passing tool, and several specialized subagents, along with overloading CC's hooks to allow you to kind of just let Claude drive itself for a very long time. Now, there's still a bunch of issues doing this today (like: it can still totally go off the rails, and you have to be precise). To combat some of these problems, another thing this plugin does is provide subagent hook overloads to force some of the specialized subagents to shell out to Codex / Gemini for second opinions. This, it turns out, seems to be very useful -- at least, it seems to nullify some of the "self bias" issues you might get if you have Claude review Claude.
+
+Overall:
 - **Outer harness:** Provides a structured runtime that controls agent execution, manages worktrees, and handles state persistence across sessions.
 - **Loop:** Enables agents to break out of single-turn interactions to perform continuous iterative work.
 - **Consensus:** Mitigates LLM self-bias and hallucinations by requiring agreement between distinct models (or fresh contexts) before committing to critical paths.
