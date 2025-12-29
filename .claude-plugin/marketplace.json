@@ -4,12 +4,12 @@
     "name": "femtomc"
   },
   "metadata": {
-    "description": "Multi-model development agents for Claude Code"
+    "description": "Agentic harness for Claude Code"
   },
   "plugins": [
     {
       "name": "idle",
-      "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
+      "description": "Agentic harness for Claude Code. Long-running loops, multi-model consensus with alice (reasoning) and bob (research).",
       "source": "./"
     }
   ]

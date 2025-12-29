@@ -1,7 +1,7 @@
 {
   "name": "idle",
-  "version": "0.9.0",
-  "description": "Multi-model development agents for exploration, research, reasoning, documentation, and review",
+  "version": "1.0.0",
+  "description": "Agentic harness for Claude Code. Long-running loops, multi-model consensus with alice (reasoning) and bob (research).",
   "author": {
     "name": "femtomc"
   }
