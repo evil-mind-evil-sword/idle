@@ -115,12 +115,12 @@ install_bibval() {
         return
     fi
     info "Installing bibval (citation validator)..."
-    if check_command cargo; then
-        cargo install --git https://github.com/evil-mind-evil-sword/bibval bibval
+    curl -fsSL https://github.com/evil-mind-evil-sword/bibval/releases/latest/download/install.sh | sh
+    if check_command bibval; then
         success "bibval installed"
     else
-        warn "Rust/Cargo not found. Install from https://rustup.rs/ then run:"
-        warn "  cargo install --git https://github.com/evil-mind-evil-sword/bibval bibval"
+        warn "bibval installation failed. Install manually:"
+        warn "  curl -fsSL https://github.com/evil-mind-evil-sword/bibval/releases/latest/download/install.sh | sh"
     fi
 }
 
