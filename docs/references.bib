@@ -1,0 +1,211 @@
+% idle architecture references
+% Sources informing the design of the idle agentic harness
+
+% =============================================================================
+% Multi-Model Consensus and Self-Bias
+% =============================================================================
+
+@article{huang2024large,
+  author    = {Huang, Jie and others},
+  title     = {Large Language Models Cannot Self-Correct Reasoning Yet},
+  journal   = {arXiv preprint arXiv:2310.01798},
+  year      = {2024},
+  note      = {Demonstrates that LLMs exhibit self-bias when asked to verify
+               their own outputs. Motivates alice's second-opinion protocol.}
+}
+
+@article{liang2024encouraging,
+  author    = {Liang, Tian and others},
+  title     = {Encouraging Divergent Thinking in Large Language Models
+               through Multi-Agent Debate},
+  journal   = {arXiv preprint arXiv:2305.19118},
+  year      = {2024},
+  note      = {Multi-agent debate improves reasoning accuracy. Informs the
+               alice/codex/gemini consensus pattern.}
+}
+
+@article{du2023improving,
+  author    = {Du, Yilun and Li, Shuang and Torralba, Antonio and
+               Tenenbaum, Joshua B. and Mordatch, Igor},
+  title     = {Improving Factuality and Reasoning in Language Models
+               through Multiagent Debate},
+  journal   = {arXiv preprint arXiv:2305.14325},
+  year      = {2023},
+  note      = {Shows that debate between multiple model instances reduces
+               hallucination. Supports fresh-context fallback in alice.}
+}
+
+% =============================================================================
+% Agentic Patterns and Orchestration
+% =============================================================================
+
+@article{wu2023autogen,
+  author    = {Wu, Qingyun and others},
+  title     = {AutoGen: Enabling Next-Gen LLM Applications via
+               Multi-Agent Conversation},
+  journal   = {arXiv preprint arXiv:2308.08155},
+  year      = {2023},
+  note      = {Multi-agent conversation framework. Informs bob/charlie
+               orchestrator/worker pattern.}
+}
+
+@article{hong2023metagpt,
+  author    = {Hong, Sirui and others},
+  title     = {MetaGPT: Meta Programming for Multi-Agent Collaborative Framework},
+  journal   = {arXiv preprint arXiv:2308.00352},
+  year      = {2023},
+  note      = {Role-based multi-agent framework with structured outputs.
+               Influences agent role definitions and output schemas.}
+}
+
+@article{madaan2024self,
+  author    = {Madaan, Aman and others},
+  title     = {Self-Refine: Iterative Refinement with Self-Feedback},
+  journal   = {Advances in Neural Information Processing Systems},
+  volume    = {36},
+  year      = {2024},
+  note      = {Iterative self-improvement pattern. Informs the loop command's
+               iteration model. Also notes self-refinement limits.}
+}
+
+% =============================================================================
+% Task Decomposition and Planning
+% =============================================================================
+
+@article{wei2022chain,
+  author    = {Wei, Jason and others},
+  title     = {Chain-of-Thought Prompting Elicits Reasoning in
+               Large Language Models},
+  journal   = {Advances in Neural Information Processing Systems},
+  volume    = {35},
+  year      = {2022},
+  note      = {Foundational work on reasoning through decomposition.
+               Informs bob's task decomposition strategy.}
+}
+
+@article{yao2024tree,
+  author    = {Yao, Shunyu and others},
+  title     = {Tree of Thoughts: Deliberate Problem Solving with
+               Large Language Models},
+  journal   = {Advances in Neural Information Processing Systems},
+  volume    = {36},
+  year      = {2024},
+  note      = {Structured exploration of solution space. Influences
+               bob's recursive decomposition with depth bounds.}
+}
+
+@article{khot2023decomposed,
+  author    = {Khot, Tushar and others},
+  title     = {Decomposed Prompting: A Modular Approach for Solving
+               Complex Tasks},
+  journal   = {arXiv preprint arXiv:2210.02406},
+  year      = {2023},
+  note      = {Modular task decomposition improves complex task performance.
+               Justifies bob spawning specialized workers.}
+}
+
+% =============================================================================
+% Agent Safety and Guardrails
+% =============================================================================
+
+@article{perez2022red,
+  author    = {Perez, Ethan and others},
+  title     = {Red Teaming Language Models with Language Models},
+  journal   = {arXiv preprint arXiv:2202.03286},
+  year      = {2022},
+  note      = {Automated adversarial testing of LLMs. Motivates the
+               PreToolUse hook's mechanical safety enforcement.}
+}
+
+@article{bai2022constitutional,
+  author    = {Bai, Yuntao and others},
+  title     = {Constitutional AI: Harmlessness from AI Feedback},
+  journal   = {arXiv preprint arXiv:2212.08073},
+  year      = {2022},
+  note      = {Principled approach to AI safety. Informs the "safety over
+               policy" design principle.}
+}
+
+% =============================================================================
+% Messaging and Coordination Patterns
+% =============================================================================
+
+@book{hohpe2004enterprise,
+  author    = {Hohpe, Gregor and Woolf, Bobby},
+  title     = {Enterprise Integration Patterns: Designing, Building,
+               and Deploying Messaging Solutions},
+  publisher = {Addison-Wesley Professional},
+  year      = {2004},
+  note      = {Canonical messaging patterns. Informs jwz topic design
+               and the publish/subscribe model for agent coordination.}
+}
+
+@article{bernstein1987concurrency,
+  author    = {Bernstein, Philip A. and Hadzilacos, Vassos and
+               Goodman, Nathan},
+  title     = {Concurrency Control and Recovery in Database Systems},
+  publisher = {Addison-Wesley},
+  year      = {1987},
+  note      = {Foundational concurrency control. Informs lock acquisition
+               in stop-hook.sh for concurrent jwz access.}
+}
+
+% =============================================================================
+% State Management and Recovery
+% =============================================================================
+
+@article{chandy1985distributed,
+  author    = {Chandy, K. Mani and Lamport, Leslie},
+  title     = {Distributed Snapshots: Determining Global States of
+               Distributed Systems},
+  journal   = {ACM Transactions on Computer Systems},
+  volume    = {3},
+  number    = {1},
+  pages     = {63--75},
+  year      = {1985},
+  note      = {Consistent distributed snapshots. Informs the PreCompact
+               hook's recovery anchor pattern.}
+}
+
+@article{lamport1978time,
+  author    = {Lamport, Leslie},
+  title     = {Time, Clocks, and the Ordering of Events in a
+               Distributed System},
+  journal   = {Communications of the ACM},
+  volume    = {21},
+  number    = {7},
+  pages     = {558--565},
+  year      = {1978},
+  note      = {Logical time and event ordering. Informs message ordering
+               in jwz topics.}
+}
+
+% =============================================================================
+% Git Workflows
+% =============================================================================
+
+@misc{chacon2014pro,
+  author    = {Chacon, Scott and Straub, Ben},
+  title     = {Pro Git},
+  edition   = {2nd},
+  publisher = {Apress},
+  year      = {2014},
+  note      = {Git worktrees and branch management. Informs the worktree
+               isolation pattern for issue mode.}
+}
+
+% =============================================================================
+% Quality Gates and Review
+% =============================================================================
+
+@inproceedings{sadowski2018modern,
+  author    = {Sadowski, Caitlin and S{\"o}derberg, Emma and Church, Luke
+               and Sipko, Michal and Bacchelli, Alberto},
+  title     = {Modern Code Review: A Case Study at Google},
+  booktitle = {International Conference on Software Engineering:
+               Software Engineering in Practice},
+  pages     = {181--190},
+  year      = {2018},
+  note      = {Code review practices at scale. Informs the review gate
+               in stop-hook.sh requiring LGTM before auto-land.}
+}
