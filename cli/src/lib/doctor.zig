@@ -1,4 +1,5 @@
 const std = @import("std");
+const zawinski = @import("zawinski");
 
 /// Check result
 pub const CheckResult = enum {
@@ -19,20 +20,14 @@ pub fn runChecks(allocator: std.mem.Allocator) ![]Check {
     var checks: std.ArrayListUnmanaged(Check) = .empty;
     defer checks.deinit(allocator);
 
-    // Check jwz
-    try checks.append(allocator, checkCommand(allocator, "jwz", &.{ "jwz", "--version" }));
-
-    // Check tissue
-    try checks.append(allocator, checkCommand(allocator, "tissue", &.{ "tissue", "--version" }));
-
     // Check claude
     try checks.append(allocator, checkCommand(allocator, "claude", &.{ "claude", "--version" }));
 
     // Check git
     try checks.append(allocator, checkCommand(allocator, "git", &.{ "git", "--version" }));
 
-    // Check jwz initialized
-    try checks.append(allocator, checkJwzInit(allocator));
+    // Check zawinski store initialized
+    try checks.append(allocator, checkZawinskiInit(allocator));
 
     // Check for codex (optional)
     try checks.append(allocator, checkCommand(allocator, "codex (optional)", &.{ "which", "codex" }));
@@ -64,14 +59,14 @@ fn checkCommand(allocator: std.mem.Allocator, name: []const u8, argv: []const []
     }
 }
 
-/// Check if jwz is initialized in current directory
-fn checkJwzInit(allocator: std.mem.Allocator) Check {
-    _ = allocator;
-    const cwd = std.fs.cwd();
-    cwd.access(".jwz", .{}) catch {
-        return .{ .name = "jwz initialized", .result = .missing, .detail = "Run 'jwz init' to initialize" };
+/// Check if zawinski store is initialized
+fn checkZawinskiInit(allocator: std.mem.Allocator) Check {
+    // Try to discover store using zawinski's logic
+    const store_dir = zawinski.store.discoverStoreDir(allocator) catch {
+        return .{ .name = ".zawinski", .result = .missing, .detail = "Run 'jwz init' to initialize" };
     };
-    return .{ .name = "jwz initialized", .result = .ok };
+    allocator.free(store_dir);
+    return .{ .name = ".zawinski", .result = .ok };
 }
 
 /// Format check results for display
