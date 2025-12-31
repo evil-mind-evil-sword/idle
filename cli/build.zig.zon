@@ -6,11 +6,11 @@
     .dependencies = .{
         .zawinski = .{
             .url = "git+https://github.com/evil-mind-evil-sword/zawinski.git#main",
-            .hash = "zawinski-0.1.0-cOuYlBtJlgAFMjUNCiu7PU1A1qawC_BAE1yG_vJsdGmU",
+            .hash = "zawinski-0.1.0-cOuYlBNKlgB-UVyTWWOvG8ioCouhU5x7YEd8Cv1IxPsl",
         },
         .tissue = .{
             .url = "git+https://github.com/evil-mind-evil-sword/tissue.git#main",
-            .hash = "tissue-0.1.0-t39Ilwt-lwB1rzWB7kZrtmCqN17cMb7R7UFXyPI_HiW4",
+            .hash = "tissue-0.1.0-t39Il75-lwA8S9NQjYhGMr9mBEy_dk2pcS7A6EfSyhx4",
         },
     },
 
