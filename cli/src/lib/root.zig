@@ -6,6 +6,7 @@
 pub const state_machine = @import("state_machine.zig");
 pub const event_parser = @import("event_parser.zig");
 pub const transcript = @import("transcript.zig");
+pub const jwz_utils = @import("jwz_utils.zig");
 
 // CLI commands
 pub const emit = @import("emit.zig");

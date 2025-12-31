@@ -1,7 +1,7 @@
 const std = @import("std");
 const idle = @import("idle");
-const zawinski = @import("zawinski");
 const extractJsonString = idle.event_parser.extractString;
+const jwz = idle.jwz_utils;
 
 /// PreCompact hook - persist recovery anchor before context compaction
 pub fn run(allocator: std.mem.Allocator) !u8 {
@@ -18,7 +18,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     std.posix.chdir(cwd) catch {};
 
     // Read current loop state from jwz
-    const state_json = try readJwzState(allocator);
+    const state_json = try jwz.readJwzState(allocator);
     defer if (state_json) |s| allocator.free(s);
 
     if (state_json == null or state_json.?.len == 0) {
@@ -53,7 +53,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     , .{ goal, @tagName(frame.mode), frame.iter, frame.max, progress, modified }) catch return 0;
 
     // Post anchor to jwz
-    try postJwzMessage(allocator, "loop:anchor", anchor);
+    try jwz.postJwzMessage(allocator, "loop:anchor", anchor);
 
     // Output context that survives compaction
     var stdout_buf: [512]u8 = undefined;
@@ -73,53 +73,4 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     return 0;
 }
 
-/// Read loop state from zawinski store directly
-fn readJwzState(allocator: std.mem.Allocator) !?[]u8 {
-    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return null;
-    defer allocator.free(store_dir);
-
-    var store = zawinski.store.Store.open(allocator, store_dir) catch return null;
-    defer store.deinit();
-
-    const messages = store.listMessages("loop:current", 1) catch return null;
-    defer {
-        for (messages) |*m| {
-            var msg = m.*;
-            msg.deinit(allocator);
-        }
-        allocator.free(messages);
-    }
-
-    if (messages.len == 0) return null;
-    return try allocator.dupe(u8, messages[0].body);
-}
-
-/// Post message to zawinski store directly
-fn postJwzMessage(allocator: std.mem.Allocator, topic: []const u8, message: []const u8) !void {
-    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return error.StoreNotFound;
-    defer allocator.free(store_dir);
-
-    var store = zawinski.store.Store.open(allocator, store_dir) catch return error.StoreOpenFailed;
-    defer store.deinit();
-
-    // Ensure topic exists
-    _ = store.fetchTopic(topic) catch |err| {
-        if (err == zawinski.store.StoreError.TopicNotFound) {
-            const topic_id = store.createTopic(topic, "") catch return error.TopicCreateFailed;
-            allocator.free(topic_id);
-        } else {
-            return error.TopicFetchFailed;
-        }
-    };
-
-    const sender = zawinski.store.Sender{
-        .id = "idle",
-        .name = "idle",
-        .model = null,
-        .role = "loop",
-    };
-
-    const msg_id = try store.createMessage(topic, null, message, .{ .sender = sender });
-    allocator.free(msg_id);
-}
 

@@ -7,50 +7,86 @@ pub fn parseEvent(allocator: std.mem.Allocator, json_str: []const u8) !?ParsedEv
     const trimmed = std.mem.trim(u8, json_str, " \t\n\r");
     if (trimmed.len == 0) return null;
 
-    // Check for schema field first
-    const schema = extractNumber(trimmed, "\"schema\"") orelse return null;
+    // Parse JSON
+    const parsed = std.json.parseFromSlice(JsonEvent, allocator, trimmed, .{
+        .ignore_unknown_fields = true,
+        .allocate = .alloc_always,
+    }) catch return null;
+
+    // Convert to LoopState
+    const json_event = parsed.value;
 
     // Parse event type
-    const event_str = extractString(trimmed, "\"event\"") orelse "STATE";
-    const event = sm.EventType.fromString(event_str) orelse .STATE;
-
-    // Parse run_id
-    const run_id = extractString(trimmed, "\"run_id\"") orelse "";
+    const event = sm.EventType.fromString(json_event.event orelse "STATE") orelse .STATE;
 
     // Parse updated_at timestamp
-    const updated_at_str = extractString(trimmed, "\"updated_at\"");
-    const updated_at = if (updated_at_str) |ts| parseIso8601(ts) else null;
+    const updated_at = if (json_event.updated_at) |ts| parseIso8601(ts) else null;
 
-    // Parse reason (for DONE events)
-    const reason_str = extractString(trimmed, "\"reason\"");
-    const reason = if (reason_str) |r| sm.CompletionReason.fromString(r) else null;
+    // Parse reason
+    const reason = if (json_event.reason) |r| sm.CompletionReason.fromString(r) else null;
 
-    // Parse stack array
+    // Convert stack frames
     var stack = std.ArrayListUnmanaged(sm.StackFrame){};
     errdefer stack.deinit(allocator);
 
-    try parseStack(allocator, trimmed, &stack);
+    if (json_event.stack) |json_stack| {
+        for (json_stack) |json_frame| {
+            const mode = sm.Mode.fromString(json_frame.mode orelse "loop") orelse .loop;
+            try stack.append(allocator, .{
+                .id = json_frame.id orelse "",
+                .mode = mode,
+                .iter = json_frame.iter orelse 0,
+                .max = json_frame.max orelse 10,
+                .prompt_file = json_frame.prompt_file orelse "",
+                .reviewed = json_frame.reviewed orelse false,
+                .checkpoint_reviewed = json_frame.checkpoint_reviewed orelse false,
+            });
+        }
+    }
 
     return ParsedEvent{
         .state = sm.LoopState{
-            .schema = @intCast(schema),
+            .schema = json_event.schema orelse 0,
             .event = event,
-            .run_id = run_id,
+            .run_id = json_event.run_id orelse "",
             .updated_at = updated_at,
             .stack = try stack.toOwnedSlice(allocator),
             .reason = reason,
         },
         .allocator = allocator,
+        .json_parsed = parsed,
     };
 }
+
+/// JSON structure for parsing events
+const JsonEvent = struct {
+    schema: ?u32 = null,
+    event: ?[]const u8 = null,
+    run_id: ?[]const u8 = null,
+    updated_at: ?[]const u8 = null,
+    reason: ?[]const u8 = null,
+    stack: ?[]const JsonStackFrame = null,
+};
+
+const JsonStackFrame = struct {
+    id: ?[]const u8 = null,
+    mode: ?[]const u8 = null,
+    iter: ?u32 = null,
+    max: ?u32 = null,
+    prompt_file: ?[]const u8 = null,
+    reviewed: ?bool = null,
+    checkpoint_reviewed: ?bool = null,
+};
 
 /// Wrapper that owns the parsed state and its memory
 pub const ParsedEvent = struct {
     state: sm.LoopState,
     allocator: std.mem.Allocator,
+    json_parsed: std.json.Parsed(JsonEvent),
 
     pub fn deinit(self: *ParsedEvent) void {
         self.allocator.free(self.state.stack);
+        self.json_parsed.deinit();
     }
 };
 
@@ -113,79 +149,8 @@ fn isLeapYear(year: i32) bool {
     return false;
 }
 
-/// Parse the stack array from JSON
-fn parseStack(allocator: std.mem.Allocator, json_str: []const u8, stack: *std.ArrayListUnmanaged(sm.StackFrame)) !void {
-
-    // Find "stack" array
-    const stack_key = std.mem.indexOf(u8, json_str, "\"stack\"") orelse return;
-    const array_start = std.mem.indexOf(u8, json_str[stack_key..], "[") orelse return;
-    const start = stack_key + array_start + 1;
-
-    // Parse each object in the array
-    var pos = start;
-    while (pos < json_str.len) {
-        // Find next {
-        while (pos < json_str.len and json_str[pos] != '{' and json_str[pos] != ']') {
-            pos += 1;
-        }
-        if (pos >= json_str.len or json_str[pos] == ']') break;
-
-        // Find matching }
-        const obj_start = pos;
-        var brace_depth: i32 = 0;
-        var in_string = false;
-        var escape_next = false;
-
-        while (pos < json_str.len) {
-            const ch = json_str[pos];
-            if (escape_next) {
-                escape_next = false;
-            } else if (ch == '\\') {
-                escape_next = true;
-            } else if (ch == '"') {
-                in_string = !in_string;
-            } else if (!in_string) {
-                if (ch == '{') {
-                    brace_depth += 1;
-                } else if (ch == '}') {
-                    brace_depth -= 1;
-                    if (brace_depth == 0) {
-                        pos += 1;
-                        break;
-                    }
-                }
-            }
-            pos += 1;
-        }
-
-        const obj_str = json_str[obj_start..pos];
-
-        // Parse frame fields
-        const id = extractString(obj_str, "\"id\"") orelse "";
-        const mode_str = extractString(obj_str, "\"mode\"") orelse "loop";
-        const mode = sm.Mode.fromString(mode_str) orelse .loop;
-        const iter = extractNumber(obj_str, "\"iter\"") orelse 0;
-        const max = extractNumber(obj_str, "\"max\"") orelse 10;
-        const prompt_file = extractString(obj_str, "\"prompt_file\"") orelse "";
-
-        // Optional fields
-        const reviewed = extractBool(obj_str, "\"reviewed\"") orelse false;
-        const checkpoint_reviewed = extractBool(obj_str, "\"checkpoint_reviewed\"") orelse false;
-
-        try stack.append(allocator, .{
-            .id = id,
-            .mode = mode,
-            .iter = @intCast(iter),
-            .max = @intCast(max),
-            .prompt_file = prompt_file,
-            .reviewed = reviewed,
-            .checkpoint_reviewed = checkpoint_reviewed,
-        });
-    }
-}
-
-/// Extract a string value from JSON given a key
-/// Public for use by hook modules
+/// Extract a string value from JSON given a key (for hook input parsing)
+/// This is a simple extraction for hook input JSON, not for event parsing
 pub fn extractString(json_str: []const u8, key: []const u8) ?[]const u8 {
     const key_pos = std.mem.indexOf(u8, json_str, key) orelse return null;
     const after_key = json_str[key_pos + key.len ..];
@@ -228,64 +193,6 @@ pub fn extractString(json_str: []const u8, key: []const u8) ?[]const u8 {
     return after_colon[start..end];
 }
 
-/// Extract a number value from JSON given a key
-/// Public for use by hook modules
-pub fn extractNumber(json_str: []const u8, key: []const u8) ?u32 {
-    const key_pos = std.mem.indexOf(u8, json_str, key) orelse return null;
-    const after_key = json_str[key_pos + key.len ..];
-
-    // Find colon
-    const colon_pos = std.mem.indexOf(u8, after_key, ":") orelse return null;
-    const after_colon = after_key[colon_pos + 1 ..];
-
-    // Skip whitespace
-    var start: usize = 0;
-    while (start < after_colon.len and (after_colon[start] == ' ' or after_colon[start] == '\t' or after_colon[start] == '\n')) {
-        start += 1;
-    }
-
-    if (start >= after_colon.len) return null;
-
-    // Find end of number
-    var end = start;
-    while (end < after_colon.len and after_colon[end] >= '0' and after_colon[end] <= '9') {
-        end += 1;
-    }
-
-    if (end == start) return null;
-
-    return std.fmt.parseInt(u32, after_colon[start..end], 10) catch null;
-}
-
-/// Extract a boolean value from JSON given a key
-/// Public for use by hook modules
-pub fn extractBool(json_str: []const u8, key: []const u8) ?bool {
-    const key_pos = std.mem.indexOf(u8, json_str, key) orelse return null;
-    const after_key = json_str[key_pos + key.len ..];
-
-    // Find colon
-    const colon_pos = std.mem.indexOf(u8, after_key, ":") orelse return null;
-    const after_colon = after_key[colon_pos + 1 ..];
-
-    // Skip whitespace
-    var start: usize = 0;
-    while (start < after_colon.len and (after_colon[start] == ' ' or after_colon[start] == '\t' or after_colon[start] == '\n')) {
-        start += 1;
-    }
-
-    if (start >= after_colon.len) return null;
-
-    // Check for true/false
-    if (after_colon.len >= start + 4 and std.mem.eql(u8, after_colon[start .. start + 4], "true")) {
-        return true;
-    }
-    if (after_colon.len >= start + 5 and std.mem.eql(u8, after_colon[start .. start + 5], "false")) {
-        return false;
-    }
-
-    return null;
-}
-
 // ============================================================================
 // Tests
 // ============================================================================
@@ -294,7 +201,6 @@ test "parseIso8601: basic timestamp" {
     const ts = parseIso8601("2024-12-21T10:30:00Z");
     try std.testing.expect(ts != null);
     // 2024-12-21 10:30:00 UTC
-    // This is a rough sanity check - exact value depends on epoch calculation
     try std.testing.expect(ts.? > 1700000000); // After 2023
     try std.testing.expect(ts.? < 1800000000); // Before 2027
 }
@@ -327,12 +233,6 @@ test "extractString: null value" {
     const json = "{\"name\":null}";
     const name = extractString(json, "\"name\"");
     try std.testing.expect(name == null);
-}
-
-test "extractNumber: basic" {
-    const json = "{\"iter\":5,\"max\":10}";
-    const iter = extractNumber(json, "\"iter\"");
-    try std.testing.expectEqual(@as(u32, 5), iter.?);
 }
 
 test "parseEvent: simple loop state" {
@@ -393,26 +293,6 @@ test "parseEvent: invalid json returns null" {
 test "parseEvent: empty string returns null" {
     const result = try parseEvent(std.testing.allocator, "");
     try std.testing.expect(result == null);
-}
-
-test "extractBool: true value" {
-    const json = "{\"reviewed\":true}";
-    const reviewed = extractBool(json, "\"reviewed\"");
-    try std.testing.expect(reviewed != null);
-    try std.testing.expect(reviewed.? == true);
-}
-
-test "extractBool: false value" {
-    const json = "{\"reviewed\":false}";
-    const reviewed = extractBool(json, "\"reviewed\"");
-    try std.testing.expect(reviewed != null);
-    try std.testing.expect(reviewed.? == false);
-}
-
-test "extractBool: missing key returns null" {
-    const json = "{\"other\":true}";
-    const reviewed = extractBool(json, "\"reviewed\"");
-    try std.testing.expect(reviewed == null);
 }
 
 test "parseEvent: frame with reviewed field" {

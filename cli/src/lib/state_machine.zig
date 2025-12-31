@@ -68,12 +68,6 @@ pub const StackFrame = struct {
     reviewed: bool = false,
     // checkpoint review tracking - true if periodic checkpoint review done for current interval
     checkpoint_reviewed: bool = false,
-
-    /// Check if checkpoint review is due at current iteration
-    pub fn isCheckpointDue(self: *const StackFrame) bool {
-        // Checkpoints at iterations 3, 6, 9, ...
-        return self.iter > 0 and self.iter % CHECKPOINT_INTERVAL == 0 and !self.checkpoint_reviewed;
-    }
 };
 
 /// Loop state parsed from jwz or state file
@@ -84,10 +78,6 @@ pub const LoopState = struct {
     updated_at: ?i64, // Unix timestamp (parsed from ISO 8601)
     stack: []StackFrame,
     reason: ?CompletionReason = null,
-
-    pub fn stackLen(self: *const LoopState) usize {
-        return self.stack.len;
-    }
 
     pub fn topFrame(self: *const LoopState) ?*const StackFrame {
         if (self.stack.len == 0) return null;

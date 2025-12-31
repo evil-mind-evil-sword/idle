@@ -213,7 +213,7 @@ fn runInitLoop(allocator: std.mem.Allocator) !u8 {
 
     // Format ISO 8601 timestamp
     var ts_buf: [32]u8 = undefined;
-    const updated_at = formatIso8601(now, &ts_buf);
+    const updated_at = idle.jwz_utils.formatIso8601ToBuf(now, &ts_buf);
 
     // Build JSON state
     var json_buf: [512]u8 = undefined;
@@ -239,28 +239,6 @@ fn runInitLoop(allocator: std.mem.Allocator) !u8 {
 
     try writeStdout("Loop initialized\n");
     return 0;
-}
-
-fn formatIso8601(timestamp: i64, buf: []u8) []const u8 {
-    // Guard against negative timestamps (pre-1970)
-    if (timestamp < 0) {
-        return "1970-01-01T00:00:00Z";
-    }
-
-    // Convert Unix timestamp to ISO 8601 using EpochSeconds
-    const epoch: std.time.epoch.EpochSeconds = .{ .secs = @intCast(timestamp) };
-    const day_seconds = epoch.getDaySeconds();
-    const year_day = epoch.getEpochDay().calculateYearDay();
-    const month_day = year_day.calculateMonthDay();
-
-    return std.fmt.bufPrint(buf, "{d:0>4}-{d:0>2}-{d:0>2}T{d:0>2}:{d:0>2}:{d:0>2}Z", .{
-        year_day.year,
-        month_day.month.numeric(),
-        month_day.day_index + 1, // day_index is 0-based
-        day_seconds.getHoursIntoDay(),
-        day_seconds.getMinutesIntoHour(),
-        day_seconds.getSecondsIntoMinute(),
-    }) catch "1970-01-01T00:00:00Z";
 }
 
 fn runStatus(allocator: std.mem.Allocator, args: []const []const u8) !u8 {

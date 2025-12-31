@@ -1,8 +1,8 @@
 const std = @import("std");
 const idle = @import("idle");
-const zawinski = @import("zawinski");
 const tissue = @import("tissue");
 const extractJsonString = idle.event_parser.extractString;
+const jwz = idle.jwz_utils;
 
 /// Session start hook - injects loop context and agent awareness
 /// Outputs JSON format for Claude Code context injection
@@ -23,7 +23,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     const writer = context_stream.writer();
 
     // Try to read active loop state
-    const state_json = readJwzState(allocator) catch null;
+    const state_json = jwz.readJwzState(allocator) catch null;
     defer if (state_json) |s| allocator.free(s);
 
     if (state_json) |json| {
@@ -81,16 +81,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
     // JSON-escape the context
     const context_data = context_stream.getWritten();
-    for (context_data) |c| {
-        switch (c) {
-            '"' => try stdout.writeAll("\\\""),
-            '\\' => try stdout.writeAll("\\\\"),
-            '\n' => try stdout.writeAll("\\n"),
-            '\r' => try stdout.writeAll("\\r"),
-            '\t' => try stdout.writeAll("\\t"),
-            else => try stdout.writeByte(c),
-        }
-    }
+    try jwz.writeJsonEscaped(stdout, context_data);
 
     try stdout.writeAll("\"}}\n");
     try stdout.flush();
@@ -136,27 +127,6 @@ fn injectReadyIssuesTo(allocator: std.mem.Allocator, stdout: anytype) !void {
     }
 
     try stdout.writeAll("====================\n");
-}
-
-/// Read loop state from zawinski store
-fn readJwzState(allocator: std.mem.Allocator) !?[]u8 {
-    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return null;
-    defer allocator.free(store_dir);
-
-    var store = zawinski.store.Store.open(allocator, store_dir) catch return null;
-    defer store.deinit();
-
-    const messages = store.listMessages("loop:current", 1) catch return null;
-    defer {
-        for (messages) |*m| {
-            var msg = m.*;
-            msg.deinit(allocator);
-        }
-        allocator.free(messages);
-    }
-
-    if (messages.len == 0) return null;
-    return try allocator.dupe(u8, messages[0].body);
 }
 
 test "session_start outputs agent awareness" {

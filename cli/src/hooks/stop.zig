@@ -2,6 +2,7 @@ const std = @import("std");
 const idle = @import("idle");
 const zawinski = @import("zawinski");
 const extractJsonString = idle.event_parser.extractString;
+const jwz = idle.jwz_utils;
 
 /// Stop hook - core loop mechanism
 /// Implements the self-referential loop via zawinski messaging
@@ -22,7 +23,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
     // Sync transcript to zawinski (always, regardless of loop state)
     if (transcript_path != null and session_id != null) {
-        syncTranscript(allocator, transcript_path.?, session_id.?, cwd);
+        jwz.syncTranscript(allocator, transcript_path.?, session_id.?, cwd);
     }
 
     // Check file-based escape hatch
@@ -31,7 +32,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     } else |_| {}
 
     // Read loop state from jwz (shell out for now)
-    const state_json = try readJwzState(allocator);
+    const state_json = try jwz.readJwzState(allocator);
     defer if (state_json) |s| allocator.free(s);
 
     if (state_json == null or state_json.?.len == 0) {
@@ -88,7 +89,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
                 if (needs_review) {
                     // Block exit and request alice review
-                    const ts = formatIso8601(now_ts);
+                    const ts = jwz.formatIso8601(now_ts);
 
                     // Build state with reviewed = true
                     var review_state_buf: [2048]u8 = undefined;
@@ -104,7 +105,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                         frame.prompt_file,
                     }) catch return 0;
 
-                    try postJwzMessage(allocator, "loop:current", review_state_json);
+                    try jwz.postJwzMessage(allocator, "loop:current", review_state_json);
 
                     // Build alice review instruction
                     const reason_str = @tagName(reason);
@@ -135,7 +136,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     const stdout = &stdout_writer.interface;
 
                     var escaped_buf: [8192]u8 = undefined;
-                    const escaped = escapeJson(reason_buf[0..reason_len], &escaped_buf);
+                    const escaped = jwz.escapeJson(reason_buf[0..reason_len], &escaped_buf);
 
                     try stdout.print("{{\"decision\":\"block\",\"reason\":\"{s}\"}}\n", .{escaped});
                     try stdout.flush();
@@ -148,7 +149,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                 const open_issues = countOpenAliceReviewIssues(allocator);
                 if (open_issues > 0) {
                     // Open issues exist - alice said NEEDS_WORK, block for re-review
-                    const ts = formatIso8601(now_ts);
+                    const ts = jwz.formatIso8601(now_ts);
 
                     // Reset reviewed to false so next completion triggers alice again
                     var rereview_state_buf: [2048]u8 = undefined;
@@ -164,7 +165,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                         frame.prompt_file,
                     }) catch return 0;
 
-                    try postJwzMessage(allocator, "loop:current", rereview_state_json);
+                    try jwz.postJwzMessage(allocator, "loop:current", rereview_state_json);
 
                     // Build re-review instruction
                     var reason_buf: [8192]u8 = undefined;
@@ -188,7 +189,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     const stdout = &stdout_writer.interface;
 
                     var escaped_buf: [8192]u8 = undefined;
-                    const escaped = escapeJson(reason_buf[0..reason_len], &escaped_buf);
+                    const escaped = jwz.escapeJson(reason_buf[0..reason_len], &escaped_buf);
 
                     try stdout.print("{{\"decision\":\"block\",\"reason\":\"{s}\"}}\n", .{escaped});
                     try stdout.flush();
@@ -203,7 +204,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     \\{{"schema":1,"event":"DONE","reason":"{s}","stack":[]}}
                 , .{reason_str}) catch return 0;
 
-                try postJwzMessage(allocator, "loop:current", done_json);
+                try jwz.postJwzMessage(allocator, "loop:current", done_json);
             }
             return 0;
         },
@@ -243,7 +244,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
             // Update state with new iteration
             // Reset reviewed to false, set checkpoint_reviewed based on whether we're triggering checkpoint
             var iter_state_buf: [2048]u8 = undefined;
-            const ts = formatIso8601(now_ts);
+            const ts = jwz.formatIso8601(now_ts);
             const checkpoint_reviewed_str = if (checkpoint_due) "true" else "false";
             const iter_state_json = std.fmt.bufPrint(&iter_state_buf,
                 \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":false,"checkpoint_reviewed":{s}}}]}}
@@ -258,7 +259,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                 checkpoint_reviewed_str,
             }) catch return 0;
 
-            try postJwzMessage(allocator, "loop:current", iter_state_json);
+            try jwz.postJwzMessage(allocator, "loop:current", iter_state_json);
 
             // Output block decision
             var stdout_buf: [16384]u8 = undefined;
@@ -267,7 +268,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
             // Escape reason for JSON
             var escaped_buf: [16384]u8 = undefined;
-            const escaped = escapeJson(reason_buf[0..reason_len], &escaped_buf);
+            const escaped = jwz.escapeJson(reason_buf[0..reason_len], &escaped_buf);
 
             try stdout.print("{{\"decision\":\"block\",\"reason\":\"{s}\"}}\n", .{escaped});
             try stdout.flush();
@@ -275,99 +276,6 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
             return 2; // Block exit
         },
     }
-}
-
-/// Read loop state from zawinski store directly
-fn readJwzState(allocator: std.mem.Allocator) !?[]u8 {
-    // Discover and open the store
-    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return null;
-    defer allocator.free(store_dir);
-
-    var store = zawinski.store.Store.open(allocator, store_dir) catch return null;
-    defer store.deinit();
-
-    // Get the latest message from loop:current topic (limit 1, ordered by created_at DESC)
-    const messages = store.listMessages("loop:current", 1) catch return null;
-    defer {
-        for (messages) |*m| {
-            var msg = m.*;
-            msg.deinit(allocator);
-        }
-        allocator.free(messages);
-    }
-
-    if (messages.len == 0) return null;
-
-    // Return a copy of the body
-    const body = try allocator.dupe(u8, messages[0].body);
-    return body;
-}
-
-/// Sync Claude transcript to zawinski store
-fn syncTranscript(allocator: std.mem.Allocator, transcript_path: []const u8, session_id: []const u8, project_path: []const u8) void {
-    // Discover and open the store
-    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return;
-    defer allocator.free(store_dir);
-
-    var store = zawinski.store.Store.open(allocator, store_dir) catch return;
-    defer store.deinit();
-
-    // Sync transcript entries to SQLite
-    _ = store.syncTranscript(transcript_path, session_id, project_path) catch return;
-}
-
-/// Post message to zawinski store directly
-fn postJwzMessage(allocator: std.mem.Allocator, topic: []const u8, message: []const u8) !void {
-    // Discover and open the store
-    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return error.StoreNotFound;
-    defer allocator.free(store_dir);
-
-    var store = zawinski.store.Store.open(allocator, store_dir) catch return error.StoreOpenFailed;
-    defer store.deinit();
-
-    // Ensure topic exists (create if needed)
-    if (store.fetchTopic(topic)) |*fetched_topic| {
-        // Topic exists, free the allocated strings
-        var t = fetched_topic.*;
-        t.deinit(allocator);
-    } else |err| {
-        if (err == zawinski.store.StoreError.TopicNotFound) {
-            const topic_id = store.createTopic(topic, "") catch return error.TopicCreateFailed;
-            allocator.free(topic_id);
-        } else {
-            return error.TopicFetchFailed;
-        }
-    }
-
-    // Create sender identity
-    const sender = zawinski.store.Sender{
-        .id = "idle",
-        .name = "idle",
-        .model = null,
-        .role = "loop",
-    };
-
-    // Post the message
-    const msg_id = try store.createMessage(topic, null, message, .{ .sender = sender });
-    allocator.free(msg_id);
-}
-
-/// Format Unix timestamp as ISO 8601
-fn formatIso8601(ts: i64) [20]u8 {
-    const epoch_secs: std.time.epoch.EpochSeconds = .{ .secs = @intCast(ts) };
-    const day_secs = epoch_secs.getDaySeconds();
-    const year_day = epoch_secs.getEpochDay().calculateYearDay();
-    const month_day = year_day.calculateMonthDay();
-    var buf: [20]u8 = undefined;
-    _ = std.fmt.bufPrint(&buf, "{d:0>4}-{d:0>2}-{d:0>2}T{d:0>2}:{d:0>2}:{d:0>2}Z", .{
-        year_day.year,
-        month_day.month.numeric(),
-        month_day.day_index + 1, // day_index is 0-based, ISO 8601 uses 1-based
-        day_secs.getHoursIntoDay(),
-        day_secs.getMinutesIntoHour(),
-        day_secs.getSecondsIntoMinute(),
-    }) catch unreachable;
-    return buf;
 }
 
 /// Count open alice-review issues via tissue CLI
@@ -416,60 +324,3 @@ fn countOpenAliceReviewIssues(allocator: std.mem.Allocator) u32 {
     return count;
 }
 
-/// Escape string for JSON
-fn escapeJson(input: []const u8, output: []u8) []const u8 {
-    var out_pos: usize = 0;
-    for (input) |c| {
-        switch (c) {
-            '"' => {
-                if (out_pos + 2 > output.len) break;
-                output[out_pos] = '\\';
-                output[out_pos + 1] = '"';
-                out_pos += 2;
-            },
-            '\\' => {
-                if (out_pos + 2 > output.len) break;
-                output[out_pos] = '\\';
-                output[out_pos + 1] = '\\';
-                out_pos += 2;
-            },
-            '\n' => {
-                if (out_pos + 2 > output.len) break;
-                output[out_pos] = '\\';
-                output[out_pos + 1] = 'n';
-                out_pos += 2;
-            },
-            '\r' => {
-                if (out_pos + 2 > output.len) break;
-                output[out_pos] = '\\';
-                output[out_pos + 1] = 'r';
-                out_pos += 2;
-            },
-            '\t' => {
-                if (out_pos + 2 > output.len) break;
-                output[out_pos] = '\\';
-                output[out_pos + 1] = 't';
-                out_pos += 2;
-            },
-            else => {
-                if (out_pos >= output.len) break;
-                output[out_pos] = c;
-                out_pos += 1;
-            },
-        }
-    }
-    return output[0..out_pos];
-}
-
-
-test "escapeJson: basic" {
-    var buf: [100]u8 = undefined;
-    const result = escapeJson("hello\nworld", &buf);
-    try std.testing.expectEqualStrings("hello\\nworld", result);
-}
-
-test "escapeJson: quotes" {
-    var buf: [100]u8 = undefined;
-    const result = escapeJson("say \"hello\"", &buf);
-    try std.testing.expectEqualStrings("say \\\"hello\\\"", result);
-}
