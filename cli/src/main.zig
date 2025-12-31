@@ -66,8 +66,10 @@ pub fn main() !u8 {
     } else if (std.mem.eql(u8, command, "issues")) {
         return runIssues(allocator, args[2..]);
     } else if (std.mem.eql(u8, command, "version")) {
-        try writeStdout("idle 1.6.2\n");
+        try writeStdout("idle 1.6.6\n");
         return 0;
+    } else if (std.mem.eql(u8, command, "debug-alice-count")) {
+        return runDebugAliceCount(allocator);
     } else if (std.mem.eql(u8, command, "help") or std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
         try writeStdout(usage);
         return 0;
@@ -511,6 +513,36 @@ fn runIssues(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
         try writeStdout(msg);
     }
 
+    return 0;
+}
+
+fn runDebugAliceCount(allocator: std.mem.Allocator) !u8 {
+    const tissue = @import("tissue");
+
+    const store_dir = tissue.store.discoverStoreDir(allocator) catch {
+        try writeStdout("No .tissue store found\n");
+        return 1;
+    };
+    defer allocator.free(store_dir);
+
+    var store = tissue.store.Store.open(allocator, store_dir) catch |err| {
+        var buf: [256]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buf, "Failed to open store: {s}\n", .{@errorName(err)}) catch "Failed\n";
+        try writeStderr(msg);
+        return 1;
+    };
+    defer store.deinit();
+
+    const count = store.countOpenIssuesByTag("alice-review") catch |err| {
+        var buf: [256]u8 = undefined;
+        const msg = std.fmt.bufPrint(&buf, "Failed to count: {s}\n", .{@errorName(err)}) catch "Failed\n";
+        try writeStderr(msg);
+        return 1;
+    };
+
+    var buf: [64]u8 = undefined;
+    const msg = std.fmt.bufPrint(&buf, "Open alice-review issues: {d}\n", .{count}) catch "Count failed\n";
+    try writeStdout(msg);
     return 0;
 }
 
