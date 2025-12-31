@@ -8,17 +8,9 @@ Initialize a project with idle infrastructure and create an actionable plan.
 
 ## Workflow
 
-### Step 1: Setup Infrastructure
+Infrastructure (`.zawinski/`, `.tissue/`, loop state) is initialized automatically at session start.
 
-Initialize the idle infrastructure:
-
-```bash
-idle init-loop
-```
-
-This creates `.zawinski/` (messaging) and `.tissue/` (issues) if needed.
-
-### Step 2: Explore the Codebase
+### Step 1: Explore the Codebase
 
 Use the Task tool with `subagent_type="Explore"` to understand the project:
 
@@ -29,7 +21,7 @@ Use the Task tool with `subagent_type="Explore"` to understand the project:
 
 Provide a brief summary of findings.
 
-### Step 3: Plan with the User
+### Step 2: Plan with the User
 
 Enter plan mode using the `EnterPlanMode` tool. In plan mode:
 
@@ -44,7 +36,7 @@ Enter plan mode using the `EnterPlanMode` tool. In plan mode:
 
 Use `AskUserQuestion` to clarify ambiguities.
 
-### Step 4: Alice Review
+### Step 3: Alice Review
 
 Once the user approves the plan, invoke Alice for adversarial review:
 
@@ -64,7 +56,7 @@ Tell Alice:
 
 Iterate with Alice until the plan is solid.
 
-### Step 5: Break into Issues
+### Step 4: Break into Issues
 
 Ask Alice to decompose the approved plan into tissue issues:
 
@@ -85,7 +77,7 @@ tissue new "Add input validation" -t feature -p 2
 tissue dep add auth-xxxx blocks validation-yyyy
 ```
 
-### Step 6: Confirm
+### Step 5: Confirm
 
 Show the user:
 1. Summary of the plan
@@ -96,10 +88,6 @@ Show the user:
 
 ```
 /init
-
-> Setting up infrastructure...
-> ✓ jwz initialized
-> ✓ tissue initialized
 
 > Exploring codebase...
 > This is a web API built with Express.js...

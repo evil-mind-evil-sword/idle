@@ -1,10 +1,11 @@
 const std = @import("std");
 const idle = @import("idle");
 const tissue = @import("tissue");
+const zawinski = @import("zawinski");
 const extractJsonString = idle.event_parser.extractString;
 const jwz = idle.jwz_utils;
 
-/// Session start hook - injects loop context and agent awareness
+/// Session start hook - initializes infrastructure and injects loop context
 /// Outputs JSON format for Claude Code context injection
 pub fn run(allocator: std.mem.Allocator) !u8 {
     // Read hook input from stdin
@@ -14,8 +15,11 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     const input_json = buf[0..n];
 
     // Extract cwd and change to project directory
-    const cwd = extractJsonString(input_json, "\"cwd\"") orelse ".";
-    std.posix.chdir(cwd) catch {};
+    const cwd_slice = extractJsonString(input_json, "\"cwd\"") orelse ".";
+    std.posix.chdir(cwd_slice) catch {};
+
+    // Initialize infrastructure (stores + loop state)
+    initializeInfrastructure(allocator) catch {};
 
     // Build context in memory using fixed buffer
     var context_buf: [32768]u8 = undefined;
@@ -127,6 +131,106 @@ fn injectReadyIssuesTo(allocator: std.mem.Allocator, stdout: anytype) !void {
     }
 
     try stdout.writeAll("====================\n");
+}
+
+/// Initialize infrastructure: .zawinski store, .tissue store, and loop state
+/// Called at session start so the agent never needs to run `idle init-loop`
+fn initializeInfrastructure(allocator: std.mem.Allocator) !void {
+    const cwd = std.fs.cwd();
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const abs_cwd = try cwd.realpath(".", &path_buf);
+
+    // Step 1: Initialize jwz store if needed
+    const jwz_path = ".zawinski";
+    const jwz_exists = blk: {
+        cwd.access(jwz_path, .{}) catch break :blk false;
+        break :blk true;
+    };
+
+    if (!jwz_exists) {
+        const full_path = try std.fs.path.join(allocator, &.{ abs_cwd, jwz_path });
+        defer allocator.free(full_path);
+
+        zawinski.store.Store.init(allocator, full_path) catch |err| switch (err) {
+            error.StoreAlreadyExists => {}, // Race condition, fine
+            else => return err,
+        };
+    }
+
+    // Step 2: Initialize tissue store if needed
+    const tissue_path = ".tissue";
+    const tissue_exists = blk: {
+        cwd.access(tissue_path, .{}) catch break :blk false;
+        break :blk true;
+    };
+
+    if (!tissue_exists) {
+        const full_path = try std.fs.path.join(allocator, &.{ abs_cwd, tissue_path });
+        defer allocator.free(full_path);
+
+        tissue.store.Store.init(allocator, full_path) catch |err| switch (err) {
+            tissue.store.StoreError.StoreAlreadyExists => {}, // Race condition, fine
+            else => return err,
+        };
+    }
+
+    // Step 3: Ensure loop:current topic exists with initial state
+    const store_dir = zawinski.store.discoverStoreDir(allocator) catch return;
+    defer allocator.free(store_dir);
+
+    var store = zawinski.store.Store.open(allocator, store_dir) catch return;
+    defer store.deinit();
+
+    // Create topic if needed
+    if (store.createTopic("loop:current", "Current loop state")) |topic_id| {
+        allocator.free(topic_id);
+    } else |err| switch (err) {
+        zawinski.store.StoreError.TopicExists => {},
+        else => return err,
+    }
+
+    // Check if there's already active loop state
+    const messages = store.listMessages("loop:current", 1) catch return;
+    defer {
+        for (messages) |*m| m.deinit(allocator);
+        allocator.free(messages);
+    }
+
+    // If no messages or no active loop, create initial idle state
+    const needs_init = blk: {
+        if (messages.len == 0) break :blk true;
+        const parsed_opt = idle.parseEvent(allocator, messages[0].body) catch break :blk true;
+        if (parsed_opt) |parsed| {
+            var p = parsed;
+            defer p.deinit();
+            // If stack is empty, we need to initialize
+            break :blk p.state.stack.len == 0;
+        }
+        break :blk true;
+    };
+
+    if (needs_init) {
+        const now = std.time.timestamp();
+        var run_id_buf: [32]u8 = undefined;
+        const run_id = std.fmt.bufPrint(&run_id_buf, "loop-{d}", .{now}) catch "loop-unknown";
+
+        var ts_buf: [32]u8 = undefined;
+        const updated_at = jwz.formatIso8601ToBuf(now, &ts_buf);
+
+        var json_buf: [512]u8 = undefined;
+        const state_json = std.fmt.bufPrint(&json_buf,
+            \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"loop","iter":0,"max":10,"prompt_file":"","reviewed":false,"checkpoint_reviewed":false}}]}}
+        , .{ run_id, updated_at, run_id }) catch return;
+
+        const sender = zawinski.store.Sender{
+            .id = "idle",
+            .name = "idle",
+            .model = null,
+            .role = "system",
+        };
+        const msg_id = store.createMessage("loop:current", null, state_json, .{ .sender = sender }) catch return;
+        allocator.free(msg_id);
+    }
 }
 
 test "session_start outputs agent awareness" {

@@ -6,21 +6,9 @@ description: Iterate on a task until complete
 
 Iterate on a task until it's complete.
 
-## Usage
+Infrastructure (`.zawinski/`, `.tissue/`, loop state) is initialized automatically at session start.
 
-```
-/loop <task description>
-```
-
-Before starting, run `idle init-loop` to initialize the infrastructure (`.zawinski/`, `.tissue/`, loop state).
-
-## Example
-
-```sh
-/loop Add input validation to API endpoints
-```
-
-Iterates on the task until complete.
+## Configuration
 
 - **Max iterations**: 10
 - **Checkpoint reviews**: Every 3 iterations (alice)

@@ -1,29 +1,182 @@
 # idle
 
-`idle` is a Claude Code plugin that exposes a long-running loop mode with persistent state and review gates.
+Long-running loops with quality gates for Claude Code.
 
-It is implemented as:
-- **(Hooks)** Claude Code hooks (`SessionStart`, `Stop`, `PreCompact`) configured in `hooks/hooks.json`
-- **(CLI tools)** A set of Zig CLI tools for tracking issues and state (as readable JSONL files). These tools are used to keep track of issues, as well as persist "state" for the plugin (whether the agent is already working within a loop, etc).
-- **(A CLI tool which implements the hook logic)** A Zig CLI (`bin/idle`) that implements those hooks (and a few helper commands)
-- **(A deep reasoning subagent)** A read-only reviewer agent `idle:alice`, with support for consensus via discussion with other agents, like Codex and Gemini
-- **(Skills)** A set of skills which augment the capabilities of the main agent, and `idle:alice`.
+idle keeps Claude iterating on your task until it's done—with automatic reviews to catch mistakes before completion.
 
-`idle` is intentionally minimal. The core logic is about setting up a long running, persistent work loop with an independent reviewer. You can program the loop by adding more skills, more subagents, etc.
+## Why idle?
 
-## Install
+Claude Code exits after each response. For complex tasks, you manually re-prompt, lose context to compaction, and hope the work is correct. idle solves three problems:
 
-### Recommended: release installer
+| Problem | idle solution |
+|---------|---------------|
+| **Context loss** | PreCompact hook saves recovery anchors before compaction |
+| **No quality gates** | alice reviews work at checkpoints and before completion |
+| **Single-model bias** | alice consults Codex and Gemini for second opinions |
 
-This installs the plugin, installs/updates dependencies, and drops the correct `bin/idle` for your OS/arch into the Claude plugin cache:
+## Quick Start
+
+Install:
 
 ```sh
 curl -fsSL https://github.com/evil-mind-evil-sword/idle/releases/latest/download/install.sh | sh
 ```
 
-This is the easiest way to get a working `bin/idle` on Linux and macOS (x86_64 + arm64).
+Run your first loop:
 
-### Manual: Claude marketplace
+```sh
+/loop Add input validation to all API endpoints
+```
+
+idle iterates until the task is complete, with alice reviewing at checkpoints (iterations 3, 6, 9) and before exit.
+
+## How It Works
+
+### The Loop
+
+```
+              /loop <task>
+                   │
+                   ▼
+            ┌─────────────┐
+        ┌──▶│    work     │
+        │   └──────┬──────┘
+        │          │
+        │          ▼
+        │   ┌─────────────┐
+        │   │  Stop hook  │──▶ alice reviews at iter 3, 6, 9
+        │   └──────┬──────┘    and on COMPLETE/STUCK
+        │          │
+        │     ┌────┴────┐
+        │  block(2)  allow(0)
+        │     │         │
+        └─────┘         ▼
+                      exit
+```
+
+The Stop hook reads loop state from `.zawinski/` and decides whether to block exit (code `2`) or allow it (code `0`). Claude keeps iterating until alice approves completion.
+
+### Completion Signals
+
+Signal your status with these exact markers (column 0, no extra characters):
+
+| Signal | Meaning |
+|--------|---------|
+| `<loop-done>COMPLETE</loop-done>` | Task finished—request alice review |
+| `<loop-done>STUCK</loop-done>` | Cannot progress—request alice review |
+| `<loop-done>MAX_ITERATIONS</loop-done>` | Hit limit (10 iterations) |
+
+### alice
+
+alice is a read-only adversarial reviewer that runs on Opus. On completion review, alice:
+
+1. Verifies the original task is fully satisfied
+2. Uses domain-specific checklists (compilers, OS, math, general software)
+3. Consults Codex and Gemini for second opinions on critical findings
+4. Creates tissue issues for problems (tagged `alice-review`)
+5. Approves only when zero `alice-review` issues remain
+
+alice breaks single-model self-bias by getting external perspectives before letting work through.
+
+## Commands
+
+### `/loop <task>`
+
+Iterate on a task until complete.
+
+```sh
+/loop Refactor the authentication module
+```
+
+- **Max iterations**: 10
+- **Checkpoint reviews**: Every 3 iterations
+- **Completion review**: On COMPLETE or STUCK
+
+### `/cancel`
+
+Stop the current loop gracefully.
+
+```sh
+/cancel
+```
+
+Posts an ABORT event; the Stop hook allows exit on next iteration.
+
+### `/init`
+
+Initialize a project with planning workflow.
+
+```sh
+/init
+```
+
+Sets up infrastructure, explores the codebase, plans with you, gets alice review, then creates tissue issues for the work.
+
+## Skills
+
+Skills inject domain-specific capabilities into agents.
+
+| Skill | Purpose | When to use |
+|-------|---------|-------------|
+| **reviewing** | Multi-model second opinions via Codex/Gemini | Validating critical findings, breaking ties |
+| **researching** | Cited research with quality gates | Complex research needing source verification |
+| **issue-tracking** | Work tracking via tissue | Creating/managing issues, checking ready work |
+| **technical-writing** | Multi-layer document review | READMEs, design docs, technical reports |
+| **bib-managing** | Bibliography curation with bibval | BibTeX validation against academic databases |
+
+Invoke skills via the Skill tool or by asking alice to use them.
+
+## Configuration
+
+### Escape Hatches
+
+| Method | Effect |
+|--------|--------|
+| `/cancel` | Graceful loop cancellation |
+| `touch .idle-disabled` | Bypass all hooks (remove after) |
+| `rm -rf .zawinski/` | Reset all state |
+
+### Observability
+
+```sh
+idle status              # Human-readable: mode + iteration
+idle status --json       # Raw JSON from loop:current
+
+jwz read loop:current --limit 1   # Current loop state
+jwz read loop:anchor --limit 1    # Recovery anchor
+```
+
+## CLI Reference
+
+`bin/idle` implements the hooks and provides helper commands:
+
+```
+idle session-start       # SessionStart hook (initializes infrastructure)
+idle stop                # Stop hook
+idle pre-compact         # PreCompact hook
+
+idle init-loop           # Bootstrap loop state (run automatically at session start)
+idle status [--json]     # Show loop status
+idle doctor              # Diagnose issues
+idle version             # Show version
+
+idle emit <topic> <role> <action> [options]
+idle issues [ready|show <id>|close <id>] [--json]
+```
+
+**Exit codes**: `0` = allow/success, `1` = error, `2` = block (re-enter loop)
+
+## Installation Options
+
+### Recommended: Release Installer
+
+```sh
+curl -fsSL https://github.com/evil-mind-evil-sword/idle/releases/latest/download/install.sh | sh
+```
+
+Installs the plugin and drops the correct `bin/idle` binary for your OS/arch (Linux and macOS, x86_64 and arm64).
+
+### Manual: Claude Marketplace
 
 ```sh
 claude plugin marketplace add evil-mind-evil-sword/marketplace
@@ -31,102 +184,19 @@ claude plugin marketplace refresh
 claude plugin install idle@emes
 ```
 
-## Implementation
+## Dependencies
 
-### Looping
+| Dependency | Purpose | Required |
+|------------|---------|----------|
+| jwz | Agent messaging | Yes |
+| tissue | Issue tracking | No |
+| codex | OpenAI second opinions | No (falls back to `claude -p`) |
+| gemini | Google third opinions | No |
+| bibval | Citation validation | No (for bib-managing skill) |
 
-The loop is driven by a message in the zawinski store (the `.zawinski/` directory) on topic `loop:current`.
+## Architecture
 
-- If `loop:current` has an active stack frame, the `Stop` hook blocks Claude from exiting (exit code `2`) and forces another iteration.
-- If your last assistant message contains a completion marker, the `Stop` hook allows exit (exit code `0`).
-- For `COMPLETE` and `STUCK`, the first completion attempt is intercepted to request an `idle:alice` review; you then re-signal completion to exit.
-
-### Claude Code surface area
-
-idle ships:
-
-- Commands (prompt templates in `commands/`):
-  - `/loop` – describes the loop contract and completion markers
-  - `/cancel` – describes how to cancel an active loop
-  - `/init` – guided “initialize + plan” workflow
-- Agent:
-  - `idle:alice` – read-only adversarial reviewer (`agents/alice.md`)
-- Skills (prompt templates in `skills/`):
-  - `reviewing`, `researching`, `issue-tracking`, `technical-writing`, `bib-managing`
-
-### Completion signals (must be exact)
-
-The `Stop` hook scans the *last assistant message text* and looks for one of these **exact** lines:
-
-```
-<loop-done>COMPLETE</loop-done>
-<loop-done>STUCK</loop-done>
-<loop-done>MAX_ITERATIONS</loop-done>
-```
-
-Rules (these are enforced by the parser in `cli/src/lib/state_machine.zig`):
-- The tag must start at column 0 (no leading spaces/tabs)
-- The line must match exactly (no extra characters or trailing spaces)
-
-### Starting a loop
-
-In Claude Code, start by running `/loop <task>`. Before iterating, initialize the loop state:
-
-```bash
-idle init-loop
-```
-
-This initializes `.zawinski/` (messaging), `.tissue/` (issues), and `loop:current` state. If a loop is already active, it leaves it alone.
-
-### Hooks
-
-#### `SessionStart` (`bin/idle session-start`)
-
-- If a loop is active, injects `Mode` and `Iteration` context at the start of the session.
-- Always injects “idle:alice is available” guidance.
-- If a `.tissue/` store exists, lists up to 15 ready issues.
-
-#### `Stop` (`bin/idle stop`)
-
-- Syncs the Claude transcript into the `.zawinski/` database (if present).
-- Reads `loop:current` and decides whether to allow exit (`0`) or block (`2`).
-- Blocks on every iteration until completion/max iterations; if `updated_at` is older than 2 hours, the loop is treated as stale and exit is allowed.
-- On iterations 3, 6, 9, … injects a checkpoint message requesting an `idle:alice` checkpoint review.
-- On `<loop-done>COMPLETE</loop-done>` or `<loop-done>STUCK</loop-done>`, blocks once to request `idle:alice` completion review.
-- On `MAX_ITERATIONS`, posts a `DONE` state and allows exit.
-
-#### `PreCompact` (`bin/idle pre-compact`)
-
-- If a loop is active, posts a recovery “anchor” message to `loop:anchor` in `.zawinski/`.
-- Prints a reminder to recover with `jwz read loop:anchor` after compaction.
-
-## Observability & control
-
-```sh
-idle status        # human-readable (mode + iteration)
-idle status --json # raw JSON from loop:current
-
-jwz read loop:current --limit 1
-jwz read loop:anchor  --limit 1
-```
-
-## CLI reference
-
-`bin/idle` is both the hook implementation and a small helper CLI:
-
-```text
-idle stop | pre-compact | session-start
-idle status [--json]
-idle doctor
-idle emit <topic> <role> <action> [--task-id ID] [--status S] [--confidence C] [--summary TEXT]
-idle issues [ready|show <id>|close <id>] [--json]
-idle version
-```
-
-Exit codes:
-- `0`: allow/success
-- `1`: error
-- `2`: block (hook tells Claude Code to re-enter)
+See [docs/architecture.md](docs/architecture.md) for design philosophy, state schemas, and implementation details.
 
 ## License
 

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2025-12-31
+
+### Changed
+
+- **Automatic infrastructure initialization** - SessionStart hook now initializes `.zawinski/`, `.tissue/`, and loop state automatically
+- **No manual `idle init-loop` needed** - Infrastructure is ready before any commands run
+- **Simplified `/loop` and `/init`** - Removed init-loop steps from command templates
+
+## [1.7.1] - 2025-12-31
+
+### Fixed
+
+- **alice-review issue counting** - Stop hook now uses tissue library directly instead of shelling out
+- **Simplified install script** - Downloads binary from GitHub releases to `~/.local/bin`
+
+## [1.7.0] - 2025-12-31
+
+### Changed
+
+- **Hooks use PATH** - All hooks now expect `idle` binary in PATH instead of `CLAUDE_PLUGIN_ROOT`
+- **Simplified binary distribution** - Single install script, single binary location
+
 ## [1.6.0] - 2025-12-31
 
 ### Changed

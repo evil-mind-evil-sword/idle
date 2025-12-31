@@ -49,8 +49,11 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
     const state = &parsed.?.state;
 
-    // Check for ABORT event
+    // Check for ABORT event - clean up and allow exit
     if (state.event == .ABORT) {
+        // Post DONE with empty stack so next session starts fresh
+        const abort_done = "{\"schema\":1,\"event\":\"DONE\",\"reason\":\"ABORT\",\"stack\":[]}";
+        jwz.postJwzMessage(allocator, "loop:current", abort_done) catch {};
         return 0;
     }
 
