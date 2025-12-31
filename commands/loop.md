@@ -32,6 +32,9 @@ The loop is driven by state in `.zawinski/` on topic `loop:current`. If there is
 # Initialize jwz store if needed
 [ -d .zawinski ] || jwz init
 
+# Ensure the topic exists (jwz won't auto-create topics on post)
+jwz topic new loop:current --quiet >/dev/null 2>&1 || true
+
 # If no active loop is present, seed loop:current with an initial STATE
 RUN_ID="loop-$(date -u +%s)"
 UPDATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

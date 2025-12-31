@@ -71,6 +71,8 @@ In Claude Code, start by running `/loop <task>`. If there is no active loop stat
 ```bash
 [ -d .zawinski ] || jwz init
 
+jwz topic new loop:current --quiet >/dev/null 2>&1 || true
+
 RUN_ID="loop-$(date -u +%s)"
 UPDATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 jwz post loop:current -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$UPDATED_AT\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"loop\",\"iter\":0,\"max\":10,\"prompt_file\":\"\",\"reviewed\":false,\"checkpoint_reviewed\":false}]}"
