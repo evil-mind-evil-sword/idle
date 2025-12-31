@@ -1,42 +1,28 @@
 ---
-description: Iterate on a task until complete, or work through the issue tracker
+description: Iterate on a task until complete
 ---
 
 # /loop
 
-Iterate on a task or work through your issue backlog.
+Iterate on a task until it's complete.
 
 ## Usage
 
 ```
-/loop [task description]
+/loop <task description>
 ```
 
-## Modes
-
-### Task Mode (with arguments)
+## Example
 
 ```sh
 /loop Add input validation to API endpoints
 ```
 
-Iterates on the task until complete. No issue tracker needed.
+Iterates on the task until complete.
 
 - **Max iterations**: 10
-- **Worktree**: No (works in current directory)
-- **Auto-land**: No
-
-### Issue Mode (no arguments)
-
-```sh
-/loop
-```
-
-Pulls issues from `tissue ready`, works them one by one.
-
-- **Max iterations**: 10 per issue
-- **Worktree**: Yes (isolates each issue in `.worktrees/idle/<issue-id>/`)
-- **Auto-land**: Yes (merges to main on completion)
+- **Checkpoint reviews**: Every 3 iterations (alice)
+- **Completion review**: On COMPLETE/STUCK signals (alice)
 
 ## Completion Signals
 
@@ -53,20 +39,18 @@ Signal completion status in your response:
 When you signal `COMPLETE` or `STUCK`, the Stop hook:
 1. Blocks exit
 2. Requests alice review
-3. Alice analyzes your work
-4. If approved → exit. If not → continue.
+3. Alice analyzes your work using domain-specific checklists
+4. Creates tissue issues for problems (tagged `alice-review`)
+5. If approved (no issues) → exit. If not → continue.
 
 This ensures quality before completion.
 
-## Issue Mode Workflow
+## Checkpoint Reviews
 
-1. `/loop` picks first ready issue from tissue
-2. Creates worktree at `.worktrees/idle/<issue-id>/`
-3. You work on the issue
-4. Signal `<loop-done>COMPLETE</loop-done>`
-5. alice reviews
-6. Auto-lands: merges to main, deletes worktree, closes issue
-7. Picks next issue, repeats
+Every 3 iterations, alice performs a checkpoint review to:
+- Check progress against the original task
+- Identify issues early
+- Provide guidance for next steps
 
 ## Escape Hatches
 

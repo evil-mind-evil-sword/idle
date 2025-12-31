@@ -20,7 +20,6 @@ const usage =
     \\  status         Show loop status (JSON or human-readable)
     \\  doctor         Check environment dependencies
     \\  emit           Post structured message to jwz
-    \\  worktree       Manage git worktrees for issues
     \\  issues         List/show issues from tissue
     \\  version        Show version information
     \\
@@ -61,12 +60,10 @@ pub fn main() !u8 {
         return runDoctor(allocator);
     } else if (std.mem.eql(u8, command, "emit")) {
         return runEmit(allocator, args[2..]);
-    } else if (std.mem.eql(u8, command, "worktree")) {
-        return runWorktree(allocator, args[2..]);
     } else if (std.mem.eql(u8, command, "issues")) {
         return runIssues(allocator, args[2..]);
     } else if (std.mem.eql(u8, command, "version")) {
-        try writeStdout("idle 1.4.0\n");
+        try writeStdout("idle 1.5.0\n");
         return 0;
     } else if (std.mem.eql(u8, command, "help") or std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
         try writeStdout(usage);
@@ -164,12 +161,6 @@ fn runStatus(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
                 const w = fbs.writer();
                 w.print("Mode: {s}\n", .{@tagName(frame.mode)}) catch {};
                 w.print("Iteration: {}/{}\n", .{ frame.iter, frame.max }) catch {};
-                if (frame.issue_id) |id| {
-                    w.print("Issue: {s}\n", .{id}) catch {};
-                }
-                if (frame.worktree_path) |path| {
-                    w.print("Worktree: {s}\n", .{path}) catch {};
-                }
                 try writeStdout(fbs.getWritten());
             }
         } else {
@@ -244,80 +235,6 @@ fn runEmit(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
     };
 
     return 0;
-}
-
-fn runWorktree(allocator: std.mem.Allocator, args: []const []const u8) !u8 {
-    // Parse: worktree <create|land|cleanup> <issue-id> [--base REF]
-    if (args.len < 2) {
-        try writeStderr("Usage: idle worktree <create|land|cleanup> <issue-id> [--base REF]\n");
-        return 1;
-    }
-
-    const subcommand = args[0];
-    const issue_id = args[1];
-
-    var base_ref: ?[]const u8 = null;
-    var i: usize = 2;
-    while (i < args.len) : (i += 1) {
-        if (std.mem.eql(u8, args[i], "--base") and i + 1 < args.len) {
-            base_ref = args[i + 1];
-            i += 1;
-        }
-    }
-
-    const result = if (std.mem.eql(u8, subcommand, "create"))
-        idle.worktree.create(allocator, issue_id, base_ref) catch |err| {
-            var buf: [256]u8 = undefined;
-            const msg = std.fmt.bufPrint(&buf, "Worktree create failed: {s}\n", .{@errorName(err)}) catch "Failed\n";
-            try writeStderr(msg);
-            return 1;
-        }
-    else if (std.mem.eql(u8, subcommand, "land"))
-        idle.worktree.land(allocator, issue_id, base_ref) catch |err| {
-            var buf: [256]u8 = undefined;
-            const msg = std.fmt.bufPrint(&buf, "Worktree land failed: {s}\n", .{@errorName(err)}) catch "Failed\n";
-            try writeStderr(msg);
-            return 1;
-        }
-    else if (std.mem.eql(u8, subcommand, "cleanup"))
-        idle.worktree.cleanup(allocator, issue_id) catch |err| {
-            var buf: [256]u8 = undefined;
-            const msg = std.fmt.bufPrint(&buf, "Worktree cleanup failed: {s}\n", .{@errorName(err)}) catch "Failed\n";
-            try writeStderr(msg);
-            return 1;
-        }
-    else {
-        try writeStderr("Unknown subcommand. Use: create, land, cleanup\n");
-        return 1;
-    };
-
-    return switch (result) {
-        .success => 0,
-        .already_exists => blk: {
-            try writeStdout("Worktree already exists\n");
-            break :blk 0;
-        },
-        .not_found => blk: {
-            try writeStderr("Worktree not found\n");
-            break :blk 1;
-        },
-        .dirty => blk: {
-            try writeStderr("Worktree has uncommitted changes\n");
-            break :blk 1;
-        },
-        .merge_failed => blk: {
-            try writeStderr("Merge failed\n");
-            break :blk 1;
-        },
-        .push_failed => blk: {
-            try writeStderr("Push failed\n");
-            break :blk 1;
-        },
-        .error_state => blk: {
-            try writeStderr("Error\n");
-            break :blk 1;
-        },
-    };
 }
 
 fn runIssues(allocator: std.mem.Allocator, args: []const []const u8) !u8 {

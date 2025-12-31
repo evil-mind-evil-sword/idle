@@ -101,13 +101,13 @@ tissue show <id>   # Lists blockers
 
 ## Workflow Integration
 
-### With /loop (issue mode)
+### With /loop
 
-When `/loop` runs without arguments:
-1. Picks first issue from `tissue ready`
-2. Creates worktree at `.worktrees/idle/<id>/`
-3. Works the issue
-4. On completion, auto-lands and picks next
+Use tissue to track work items. When working on an issue:
+1. Check `tissue ready` to see what's available
+2. Start working: `tissue status <id> in_progress`
+3. Add comments as you discover things
+4. Close when done: `tissue status <id> closed`
 
 ### Issue Naming
 

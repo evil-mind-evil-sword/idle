@@ -40,12 +40,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
     // Build goal description
     var goal_buf: [256]u8 = undefined;
-    const goal = blk: {
-        if (frame.issue_id) |id| {
-            break :blk std.fmt.bufPrint(&goal_buf, "Working on issue: {s}", .{id}) catch "Loop in progress";
-        }
-        break :blk std.fmt.bufPrint(&goal_buf, "{s} loop in progress", .{@tagName(frame.mode)}) catch "Loop in progress";
-    };
+    const goal = std.fmt.bufPrint(&goal_buf, "{s} loop in progress", .{@tagName(frame.mode)}) catch "Loop in progress";
 
     // Get recent git info (simplified - just note it's available)
     const progress = "See git log for recent commits";

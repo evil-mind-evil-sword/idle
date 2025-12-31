@@ -70,7 +70,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
         defer if (text) |t| allocator.free(t);
 
         if (text) |t| {
-            completion_signal = idle.StateMachine.detectCompletionSignal(frame.mode, t);
+            completion_signal = idle.StateMachine.detectCompletionSignal(t);
         }
     }
 
@@ -91,9 +91,9 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     const ts = formatIso8601(now_ts);
 
                     // Build state with reviewed = true
-                    var state_buf: [2048]u8 = undefined;
-                    var state_len = (std.fmt.bufPrint(&state_buf,
-                        \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":true
+                    var review_state_buf: [2048]u8 = undefined;
+                    const review_state_json = std.fmt.bufPrint(&review_state_buf,
+                        \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":true}}]}}
                     , .{
                         state.run_id,
                         &ts,
@@ -102,28 +102,9 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                         frame.iter,
                         frame.max,
                         frame.prompt_file,
-                    }) catch return 0).len;
+                    }) catch return 0;
 
-                    // Add optional fields
-                    if (frame.issue_id) |id| {
-                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                            ",\"issue_id\":\"{s}\"", .{id}) catch return 0).len;
-                    }
-                    if (frame.worktree_path) |path| {
-                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                            ",\"worktree_path\":\"{s}\"", .{path}) catch return 0).len;
-                    }
-                    if (frame.branch) |branch| {
-                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                            ",\"branch\":\"{s}\"", .{branch}) catch return 0).len;
-                    }
-                    if (frame.base_ref) |base_ref| {
-                        state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                            ",\"base_ref\":\"{s}\"", .{base_ref}) catch return 0).len;
-                    }
-                    state_len += (std.fmt.bufPrint(state_buf[state_len..], "}}]}}", .{}) catch return 0).len;
-
-                    try postJwzMessage(allocator, "loop:current", state_buf[0..state_len]);
+                    try postJwzMessage(allocator, "loop:current", review_state_json);
 
                     // Build alice review instruction
                     const reason_str = @tagName(reason);
@@ -162,18 +143,6 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     return 2; // Block exit for review
                 }
 
-                // Already reviewed or doesn't need review - proceed with exit
-                if (reason == .COMPLETE and frame.mode == .issue) {
-                    if (frame.worktree_path) |wt_path| {
-                        if (frame.branch) |branch| {
-                            if (frame.issue_id) |issue_id| {
-                                const base_ref = frame.base_ref orelse "main";
-                                _ = idle.autoland.autoLand(allocator, issue_id, wt_path, branch, base_ref);
-                            }
-                        }
-                    }
-                }
-
                 // Post completion state
                 const reason_str = @tagName(reason);
                 var done_buf: [256]u8 = undefined;
@@ -190,7 +159,7 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
             const new_iter = result.new_iteration orelse frame.iter + 1;
 
             // Check if checkpoint review is due (every 3 iterations)
-            const checkpoint_interval = idle.StateMachine.CHECKPOINT_INTERVAL;
+            const checkpoint_interval = idle.state_machine.CHECKPOINT_INTERVAL;
             const checkpoint_due = new_iter > 0 and new_iter % checkpoint_interval == 0 and !frame.checkpoint_reviewed;
 
             // Build continuation or checkpoint message
@@ -218,31 +187,13 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     "[ITERATION {}/{}] Continue working on the task. Check your progress and either complete the task or keep iterating.", .{ new_iter, frame.max }) catch return 0).len;
             }
 
-            // Add worktree context if available
-            if (frame.worktree_path) |wt_path| {
-                reason_len += (std.fmt.bufPrint(reason_buf[reason_len..],
-                    "\n\nWORKTREE CONTEXT:\n- Working directory: {s}", .{wt_path}) catch return 0).len;
-
-                if (frame.branch) |branch| {
-                    reason_len += (std.fmt.bufPrint(reason_buf[reason_len..],
-                        "\n- Branch: {s}", .{branch}) catch return 0).len;
-                }
-                if (frame.issue_id) |issue_id| {
-                    reason_len += (std.fmt.bufPrint(reason_buf[reason_len..],
-                        "\n- Issue: {s}", .{issue_id}) catch return 0).len;
-                }
-
-                reason_len += (std.fmt.bufPrint(reason_buf[reason_len..],
-                    "\n\nIMPORTANT: All file operations must use absolute paths under {s}", .{wt_path}) catch return 0).len;
-            }
-
             // Update state with new iteration
             // Reset reviewed to false, set checkpoint_reviewed based on whether we're triggering checkpoint
-            var state_buf: [2048]u8 = undefined;
+            var iter_state_buf: [2048]u8 = undefined;
             const ts = formatIso8601(now_ts);
             const checkpoint_reviewed_str = if (checkpoint_due) "true" else "false";
-            var state_len = (std.fmt.bufPrint(&state_buf,
-                \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":false,"checkpoint_reviewed":{s}
+            const iter_state_json = std.fmt.bufPrint(&iter_state_buf,
+                \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":false,"checkpoint_reviewed":{s}}}]}}
             , .{
                 state.run_id,
                 &ts,
@@ -252,28 +203,9 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                 frame.max,
                 frame.prompt_file,
                 checkpoint_reviewed_str,
-            }) catch return 0).len;
+            }) catch return 0;
 
-            // Add optional fields
-            if (frame.issue_id) |id| {
-                state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                    ",\"issue_id\":\"{s}\"", .{id}) catch return 0).len;
-            }
-            if (frame.worktree_path) |path| {
-                state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                    ",\"worktree_path\":\"{s}\"", .{path}) catch return 0).len;
-            }
-            if (frame.branch) |branch| {
-                state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                    ",\"branch\":\"{s}\"", .{branch}) catch return 0).len;
-            }
-            if (frame.base_ref) |base_ref| {
-                state_len += (std.fmt.bufPrint(state_buf[state_len..],
-                    ",\"base_ref\":\"{s}\"", .{base_ref}) catch return 0).len;
-            }
-            state_len += (std.fmt.bufPrint(state_buf[state_len..], "}}]}}", .{}) catch return 0).len;
-
-            try postJwzMessage(allocator, "loop:current", state_buf[0..state_len]);
+            try postJwzMessage(allocator, "loop:current", iter_state_json);
 
             // Output block decision
             var stdout_buf: [16384]u8 = undefined;

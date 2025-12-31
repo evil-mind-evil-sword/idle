@@ -33,13 +33,9 @@ pub const EventType = enum {
 /// Loop modes
 pub const Mode = enum {
     loop,
-    grind,
-    issue,
 
     pub fn fromString(s: []const u8) ?Mode {
         if (std.mem.eql(u8, s, "loop")) return .loop;
-        if (std.mem.eql(u8, s, "grind")) return .grind;
-        if (std.mem.eql(u8, s, "issue")) return .issue;
         return null;
     }
 };
@@ -49,15 +45,11 @@ pub const CompletionReason = enum {
     COMPLETE,
     MAX_ITERATIONS,
     STUCK,
-    NO_MORE_ISSUES,
-    MAX_ISSUES,
 
     pub fn fromString(s: []const u8) ?CompletionReason {
         if (std.mem.eql(u8, s, "COMPLETE")) return .COMPLETE;
         if (std.mem.eql(u8, s, "MAX_ITERATIONS")) return .MAX_ITERATIONS;
         if (std.mem.eql(u8, s, "STUCK")) return .STUCK;
-        if (std.mem.eql(u8, s, "NO_MORE_ISSUES")) return .NO_MORE_ISSUES;
-        if (std.mem.eql(u8, s, "MAX_ISSUES")) return .MAX_ISSUES;
         return null;
     }
 };
@@ -72,13 +64,6 @@ pub const StackFrame = struct {
     iter: u32,
     max: u32,
     prompt_file: []const u8,
-    // issue mode fields
-    issue_id: ?[]const u8 = null,
-    worktree_path: ?[]const u8 = null,
-    branch: ?[]const u8 = null,
-    base_ref: ?[]const u8 = null,
-    // grind mode fields
-    filter: ?[]const u8 = null,
     // review tracking - true if alice has reviewed this iteration's completion
     reviewed: bool = false,
     // checkpoint review tracking - true if periodic checkpoint review done for current interval
@@ -220,9 +205,9 @@ pub const StateMachine = struct {
         };
     }
 
-    /// Check transcript text for completion signals based on mode
+    /// Check transcript text for completion signals
     /// Returns the signal reason if found, null otherwise
-    pub fn detectCompletionSignal(mode: Mode, text: []const u8) ?CompletionReason {
+    pub fn detectCompletionSignal(text: []const u8) ?CompletionReason {
         // Only match signals at start of line (not indented in code blocks)
         // This is a simple heuristic - the bash version uses grep with ^
 
@@ -233,23 +218,9 @@ pub const StateMachine = struct {
             // Skip if indented (likely in code block)
             if (trimmed.len != line.len) continue;
 
-            switch (mode) {
-                .loop => {
-                    if (std.mem.eql(u8, trimmed, "<loop-done>COMPLETE</loop-done>")) return .COMPLETE;
-                    if (std.mem.eql(u8, trimmed, "<loop-done>MAX_ITERATIONS</loop-done>")) return .MAX_ITERATIONS;
-                    if (std.mem.eql(u8, trimmed, "<loop-done>STUCK</loop-done>")) return .STUCK;
-                },
-                .issue => {
-                    if (std.mem.eql(u8, trimmed, "<loop-done>COMPLETE</loop-done>")) return .COMPLETE;
-                    if (std.mem.eql(u8, trimmed, "<loop-done>MAX_ITERATIONS</loop-done>")) return .MAX_ITERATIONS;
-                    if (std.mem.eql(u8, trimmed, "<loop-done>STUCK</loop-done>")) return .STUCK;
-                    if (std.mem.eql(u8, trimmed, "<issue-complete>DONE</issue-complete>")) return .COMPLETE;
-                },
-                .grind => {
-                    if (std.mem.eql(u8, trimmed, "<grind-done>NO_MORE_ISSUES</grind-done>")) return .NO_MORE_ISSUES;
-                    if (std.mem.eql(u8, trimmed, "<grind-done>MAX_ISSUES</grind-done>")) return .MAX_ISSUES;
-                },
-            }
+            if (std.mem.eql(u8, trimmed, "<loop-done>COMPLETE</loop-done>")) return .COMPLETE;
+            if (std.mem.eql(u8, trimmed, "<loop-done>MAX_ITERATIONS</loop-done>")) return .MAX_ITERATIONS;
+            if (std.mem.eql(u8, trimmed, "<loop-done>STUCK</loop-done>")) return .STUCK;
         }
 
         return null;
@@ -370,42 +341,27 @@ test "State: active when no signal, increments iteration" {
     try std.testing.expectEqual(@as(u32, 4), result.new_iteration.?);
 }
 
-test "Signal detection: loop mode COMPLETE" {
-    const signal = StateMachine.detectCompletionSignal(.loop, "some output\n<loop-done>COMPLETE</loop-done>\nmore text");
+test "Signal detection: COMPLETE" {
+    const signal = StateMachine.detectCompletionSignal("some output\n<loop-done>COMPLETE</loop-done>\nmore text");
     try std.testing.expectEqual(CompletionReason.COMPLETE, signal.?);
 }
 
-test "Signal detection: loop mode MAX_ITERATIONS" {
-    const signal = StateMachine.detectCompletionSignal(.loop, "<loop-done>MAX_ITERATIONS</loop-done>");
+test "Signal detection: MAX_ITERATIONS" {
+    const signal = StateMachine.detectCompletionSignal("<loop-done>MAX_ITERATIONS</loop-done>");
     try std.testing.expectEqual(CompletionReason.MAX_ITERATIONS, signal.?);
 }
 
-test "Signal detection: loop mode STUCK" {
-    const signal = StateMachine.detectCompletionSignal(.loop, "<loop-done>STUCK</loop-done>");
+test "Signal detection: STUCK" {
+    const signal = StateMachine.detectCompletionSignal("<loop-done>STUCK</loop-done>");
     try std.testing.expectEqual(CompletionReason.STUCK, signal.?);
 }
 
-test "Signal detection: issue mode with issue-complete" {
-    const signal = StateMachine.detectCompletionSignal(.issue, "<issue-complete>DONE</issue-complete>");
-    try std.testing.expectEqual(CompletionReason.COMPLETE, signal.?);
-}
-
-test "Signal detection: grind mode NO_MORE_ISSUES" {
-    const signal = StateMachine.detectCompletionSignal(.grind, "<grind-done>NO_MORE_ISSUES</grind-done>");
-    try std.testing.expectEqual(CompletionReason.NO_MORE_ISSUES, signal.?);
-}
-
-test "Signal detection: grind mode MAX_ISSUES" {
-    const signal = StateMachine.detectCompletionSignal(.grind, "<grind-done>MAX_ISSUES</grind-done>");
-    try std.testing.expectEqual(CompletionReason.MAX_ISSUES, signal.?);
-}
-
 test "Signal detection: ignores indented signals (code blocks)" {
-    const signal = StateMachine.detectCompletionSignal(.loop, "  <loop-done>COMPLETE</loop-done>");
+    const signal = StateMachine.detectCompletionSignal("  <loop-done>COMPLETE</loop-done>");
     try std.testing.expect(signal == null);
 }
 
 test "Signal detection: no signal in text" {
-    const signal = StateMachine.detectCompletionSignal(.loop, "just some regular output\nnothing here");
+    const signal = StateMachine.detectCompletionSignal("just some regular output\nnothing here");
     try std.testing.expect(signal == null);
 }

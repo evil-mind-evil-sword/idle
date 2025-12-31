@@ -10,9 +10,7 @@ pub const transcript = @import("transcript.zig");
 // CLI commands
 pub const emit = @import("emit.zig");
 pub const doctor = @import("doctor.zig");
-pub const worktree = @import("worktree.zig");
 pub const issues = @import("issues.zig");
-pub const autoland = @import("autoland.zig");
 
 // Re-export common types
 pub const State = state_machine.State;

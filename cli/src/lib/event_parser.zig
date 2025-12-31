@@ -169,11 +169,6 @@ fn parseStack(allocator: std.mem.Allocator, json_str: []const u8, stack: *std.Ar
         const prompt_file = extractString(obj_str, "\"prompt_file\"") orelse "";
 
         // Optional fields
-        const issue_id = extractString(obj_str, "\"issue_id\"");
-        const worktree_path = extractString(obj_str, "\"worktree_path\"");
-        const branch = extractString(obj_str, "\"branch\"");
-        const base_ref = extractString(obj_str, "\"base_ref\"");
-        const filter = extractString(obj_str, "\"filter\"");
         const reviewed = extractBool(obj_str, "\"reviewed\"") orelse false;
         const checkpoint_reviewed = extractBool(obj_str, "\"checkpoint_reviewed\"") orelse false;
 
@@ -183,11 +178,6 @@ fn parseStack(allocator: std.mem.Allocator, json_str: []const u8, stack: *std.Ar
             .iter = @intCast(iter),
             .max = @intCast(max),
             .prompt_file = prompt_file,
-            .issue_id = issue_id,
-            .worktree_path = worktree_path,
-            .branch = branch,
-            .base_ref = base_ref,
-            .filter = filter,
             .reviewed = reviewed,
             .checkpoint_reviewed = checkpoint_reviewed,
         });
@@ -393,28 +383,6 @@ test "parseEvent: ABORT event" {
 
     const state = parsed.?.state;
     try std.testing.expectEqual(sm.EventType.ABORT, state.event);
-}
-
-test "parseEvent: nested grind/issue stack" {
-    const json =
-        \\{"schema":0,"event":"STATE","run_id":"grind-123","updated_at":"2024-12-21T10:00:00Z","stack":[{"id":"grind-123","mode":"grind","iter":2,"max":100,"prompt_file":"/tmp/g.txt","filter":"priority:1"},{"id":"issue-456","mode":"issue","iter":1,"max":10,"prompt_file":"/tmp/i.txt","issue_id":"auth-123","worktree_path":"/path/to/wt","branch":"idle/issue/auth-123"}]}
-    ;
-
-    var parsed = try parseEvent(std.testing.allocator, json);
-    try std.testing.expect(parsed != null);
-    defer parsed.?.deinit();
-
-    const state = parsed.?.state;
-    try std.testing.expectEqual(@as(usize, 2), state.stack.len);
-
-    const grind_frame = state.stack[0];
-    try std.testing.expectEqual(sm.Mode.grind, grind_frame.mode);
-    try std.testing.expectEqualStrings("priority:1", grind_frame.filter.?);
-
-    const issue_frame = state.stack[1];
-    try std.testing.expectEqual(sm.Mode.issue, issue_frame.mode);
-    try std.testing.expectEqualStrings("auth-123", issue_frame.issue_id.?);
-    try std.testing.expectEqualStrings("/path/to/wt", issue_frame.worktree_path.?);
 }
 
 test "parseEvent: invalid json returns null" {

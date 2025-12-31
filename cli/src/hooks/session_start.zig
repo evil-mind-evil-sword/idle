@@ -42,16 +42,6 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                         frame.max,
                     });
 
-                    if (frame.issue_id) |issue_id| {
-                        try stdout.print("Issue: {s}\n", .{issue_id});
-                    }
-                    if (frame.worktree_path) |wt| {
-                        try stdout.print("Worktree: {s}\n", .{wt});
-                    }
-                    if (frame.branch) |branch| {
-                        try stdout.print("Branch: {s}\n", .{branch});
-                    }
-
                     try stdout.writeAll("\nYour task: Continue working on this loop. ");
                     try stdout.writeAll("Signal <loop-done>COMPLETE</loop-done> when finished.\n");
                     try stdout.writeAll("==================\n\n");

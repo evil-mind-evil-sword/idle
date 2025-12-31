@@ -108,7 +108,7 @@ SessionStart ─┐
 All hooks are implemented in the Zig CLI (`idle <command>`) for performance and type safety.
 
 **SessionStart** (`idle session-start`)
-Injects loop context and agent awareness. Shows active loop state (mode, iteration, issue, worktree) and alice usage guidance.
+Injects loop context and agent awareness. Shows active loop state (mode, iteration) and alice usage guidance.
 
 **Stop** (`idle stop`)
 The core loop mechanism. On agent exit:
@@ -116,7 +116,7 @@ The core loop mechanism. On agent exit:
 2. Read loop state from zawinski store
 3. Check for completion signals (`<loop-done>COMPLETE</loop-done>`)
 4. If COMPLETE/STUCK and not reviewed: block for alice review
-5. If reviewed and complete: auto-land (issue mode), post DONE state
+5. If reviewed and complete: post DONE state
 6. If incomplete: increment iteration, emit `block` decision to force re-entry
 7. Checkpoint reviews triggered at iterations 3, 6, 9, etc.
 
@@ -141,54 +141,29 @@ Loop state is stored as JSON in jwz messages on the `loop:current` topic:
   "stack": [
     {
       "id": "loop-1735500000-12345",
-      "mode": "issue",
+      "mode": "loop",
       "iter": 3,
       "max": 10,
-      "prompt_blob": "sha256:abc123...",
-      "issue_id": "auth-bug-42",
-      "worktree_path": "/path/to/repo/.worktrees/idle/auth-bug-42",
-      "branch": "idle/issue/auth-bug-42",
-      "base_ref": "main"
+      "prompt_file": "/tmp/idle-loop-prompt.txt",
+      "reviewed": false,
+      "checkpoint_reviewed": false
     }
   ]
 }
 ```
 
-The stack model supports nested loops (e.g., `/loop` working through issues, each issue having its own iteration state).
+## Loop Mode
 
-## Loop Modes
-
-### Task Mode
-
-Iterate on a specific task with no issue tracking:
+Iterate on a specific task:
 
 ```
 /loop Add input validation to API endpoints
 ```
 
 - Runs up to 10 iterations
+- Alice reviews at checkpoints (iterations 3, 6, 9, ...)
+- Alice reviews on completion signal
 - 3 consecutive failures → STUCK
-- No worktree isolation
-- No auto-land
-
-### Issue Mode
-
-Pull from tissue, work in worktrees, auto-land on completion:
-
-```
-/loop
-```
-
-1. Pick first ready issue from `tissue ready`
-2. Create worktree at `.worktrees/idle/<issue-id>/`
-3. Work on issue (up to 10 iterations)
-4. On `<loop-done>COMPLETE</loop-done>`:
-   - Verify review gate passed
-   - Fast-forward merge to base branch
-   - Push to remote
-   - Remove worktree, delete branch
-   - Close issue
-   - Pick next issue
 
 ### Completion Signals
 
@@ -199,26 +174,6 @@ Agents signal loop state via XML markers:
 | `<loop-done>COMPLETE</loop-done>` | Task finished successfully |
 | `<loop-done>MAX_ITERATIONS</loop-done>` | Iteration limit reached |
 | `<loop-done>STUCK</loop-done>` | Cannot make progress |
-
-## Worktree Isolation
-
-Each issue gets its own git worktree for isolation:
-
-```
-repo/
-├── .worktrees/
-│   └── idle/
-│       ├── issue-abc123/   ← worktree for issue abc123
-│       └── issue-def456/   ← worktree for issue def456
-└── src/                    ← main worktree
-```
-
-Benefits:
-- Parallel work on multiple issues
-- Clean rollback (just delete worktree)
-- No uncommitted changes leak between issues
-
-The stop hook injects worktree context on each iteration, reminding agents to use absolute paths under the worktree.
 
 ## Messaging (jwz)
 
@@ -326,21 +281,15 @@ Config is stored in the jwz loop state:
 |------|--------|
 | `.idle-disabled` | Bypass loop hook (create to disable, remove after) |
 
-### Git Configuration
-
-```bash
-git config idle.baseRef main  # Base branch for worktrees
-```
-
 ## Dependencies
 
 | Dependency | Purpose | Required |
 |------------|---------|----------|
-| tissue | Issue tracking | Yes (for issue mode) |
+| tissue | Issue tracking | No (for issue-tracking skill) |
 | jwz | Agent messaging | Yes |
-| uv | Python script runner | Yes (for search) |
-| gh | GitHub CLI | Yes (for GitHub research) |
-| bibval | Citation validation | Yes (for bib-managing) |
+| uv | Python script runner | No (for search) |
+| gh | GitHub CLI | No (for GitHub research) |
+| bibval | Citation validation | No (for bib-managing skill) |
 | codex | OpenAI second opinions | No (falls back to claude -p) |
 | gemini | Google third opinions | No (optional diversity) |
 
