@@ -64,6 +64,20 @@ Rules (these are enforced by the parser in `cli/src/lib/state_machine.zig`):
 - The tag must start at column 0 (no leading spaces/tabs)
 - The line must match exactly (no extra characters or trailing spaces)
 
+### Starting a loop
+
+In Claude Code, start by running `/loop <task>`. If there is no active loop state yet, seed `loop:current` once (the same bootstrap snippet is included in `commands/loop.md`):
+
+```bash
+[ -d .zawinski ] || jwz init
+
+RUN_ID="loop-$(date -u +%s)"
+UPDATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+jwz post loop:current -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$UPDATED_AT\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"loop\",\"iter\":0,\"max\":10,\"prompt_file\":\"\",\"reviewed\":false,\"checkpoint_reviewed\":false}]}"
+```
+
+If a loop is already active, do **not** overwrite it — just continue working.
+
 ### Hooks
 
 #### `SessionStart` (`bin/idle session-start`)

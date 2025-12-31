@@ -24,6 +24,22 @@ Iterates on the task until complete.
 - **Checkpoint reviews**: Every 3 iterations (alice)
 - **Completion review**: On COMPLETE/STUCK signals (alice)
 
+## Bootstrap (first run)
+
+The loop is driven by state in `.zawinski/` on topic `loop:current`. If there is no active loop state yet, initialize it once before iterating:
+
+```bash
+# Initialize jwz store if needed
+[ -d .zawinski ] || jwz init
+
+# If no active loop is present, seed loop:current with an initial STATE
+RUN_ID="loop-$(date -u +%s)"
+UPDATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+jwz post loop:current -m "{\"schema\":1,\"event\":\"STATE\",\"run_id\":\"$RUN_ID\",\"updated_at\":\"$UPDATED_AT\",\"stack\":[{\"id\":\"$RUN_ID\",\"mode\":\"loop\",\"iter\":0,\"max\":10,\"prompt_file\":\"\",\"reviewed\":false,\"checkpoint_reviewed\":false}]}"
+```
+
+If a loop is already active, do **not** overwrite it — just continue working.
+
 ## Completion Signals
 
 Signal completion status in your response:
@@ -57,5 +73,5 @@ Every 3 iterations, alice performs a checkpoint review to:
 ```sh
 /cancel                  # Graceful cancellation
 touch .idle-disabled     # Bypass hooks
-rm -rf .jwz/             # Reset all state
+rm -rf .zawinski/        # Reset all jwz state
 ```

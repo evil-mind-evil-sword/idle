@@ -8,9 +8,8 @@ Stop the current loop gracefully.
 
 ## What It Does
 
-1. Posts `ABORT` event to jwz
-2. Pauses any active issue (if in issue mode)
-3. Loop exits on next iteration
+1. Posts an `ABORT` event to `loop:current` in jwz
+2. The Stop hook sees the abort state and allows exit
 
 ## Usage
 
@@ -25,5 +24,5 @@ If `/cancel` doesn't work:
 | Method | Command |
 |--------|---------|
 | File bypass | `touch .idle-disabled` (remove after) |
-| Manual abort | `jwz post "loop:current" -m '{"event":"ABORT","stack":[]}'` |
-| Full reset | `rm -rf .jwz/` |
+| Manual abort | `jwz post "loop:current" -m '{"schema":1,"event":"ABORT","stack":[]}'` |
+| Full reset | `rm -rf .zawinski/` |
