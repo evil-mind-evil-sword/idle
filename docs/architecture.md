@@ -8,7 +8,7 @@ Three principles guide idle's architecture:
 
 1. **Pull over push.** Agents retrieve context on demand rather than receiving large injections upfront. The stop hook posts minimal state to jwz; agents read what they need.
 
-2. **Safety over policy.** Guardrails are enforced mechanically (PreToolUse hook blocks destructive commands) rather than relying on prompt instructions that agents might ignore.
+2. **Safety over policy.** Critical guardrails are enforced mechanically rather than relying on prompt instructions that agents might ignore.
 
 3. **Pointer over payload.** State messages contain references (file paths, issue IDs) rather than inline content. This keeps message sizes bounded and supports recovery after context compaction.
 
@@ -34,12 +34,12 @@ Three principles guide idle's architecture:
 │  │                                                          │  │
 │  │   ┌──────────────────────────────────────────────────┐  │  │
 │  │   │                   Hooks                          │  │  │
-│  │   │  SessionStart │ Stop │ SubagentStop │ PreToolUse │  │  │
+│  │   │      SessionStart │ Stop │ PreCompact            │  │  │
 │  │   └──────────────────────────────────────────────────┘  │  │
 │  │                                                          │  │
 │  │   ┌──────────────────────────────────────────────────┐  │  │
 │  │   │                  Skills                          │  │  │
-│  │   │  messaging │ issue-tracking │ researching │ ...  │  │  │
+│  │   │   reviewing │ researching │ issue-tracking │ ... │  │  │
 │  │   └──────────────────────────────────────────────────┘  │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                │
@@ -88,8 +88,6 @@ SessionStart ─┐
         │  Active  │                │
         └────┬─────┘                │
              │                      │
-    PreToolUse (per tool)           │
-             │                      │
              ▼                      │
         ┌──────────┐                │
         │  Agent   │                │
@@ -120,13 +118,7 @@ The core loop mechanism. On agent exit:
 4. If COMPLETE/STUCK and not reviewed: block for alice review
 5. If reviewed and complete: auto-land (issue mode), post DONE state
 6. If incomplete: increment iteration, emit `block` decision to force re-entry
-
-**PreToolUse** (`idle pre-tool-use`)
-Safety guardrails for Bash commands. Blocks:
-- `git push --force` to main/master
-- `git reset --hard`
-- `rm -rf /` or `rm -rf ~`
-- `DROP DATABASE`
+7. Checkpoint reviews triggered at iterations 3, 6, 9, etc.
 
 **PreCompact** (`idle pre-compact`)
 Before context compaction, writes a recovery anchor to `loop:anchor` containing:
@@ -135,13 +127,6 @@ Before context compaction, writes a recovery anchor to `loop:anchor` containing:
 - Alice reminder for post-compaction context
 
 After compaction, agents can read this anchor to restore context.
-
-**SubagentStop** (`idle subagent-stop`)
-Enforces the second-opinion requirement for alice. When alice completes, the hook verifies:
-1. A `codex exec` or `gemini exec` command was invoked
-2. The output contains a `## Second Opinion` section with content
-
-If either check fails, blocks completion. On success, injects guidance for acting on alice's review.
 
 ### State Schema
 
@@ -289,13 +274,11 @@ claude -p --agent alice \
 
 | Skill | Description |
 |-------|-------------|
-| messaging | Agent coordination via jwz |
-| issue-tracking | Work tracking via tissue |
+| reviewing | Multi-model second opinions (Codex, Gemini) |
 | researching | Quality-gated research with citations |
+| issue-tracking | Work tracking via tissue |
 | technical-writing | Multi-layer document review |
 | bib-managing | Bibliography curation with bibval |
-| querying-codex | OpenAI Codex second opinions |
-| querying-gemini | Google Gemini third perspectives |
 
 ## Error Handling
 
@@ -373,9 +356,7 @@ idle/
 │       ├── hooks/        # Hook implementations
 │       │   ├── stop.zig
 │       │   ├── session_start.zig
-│       │   ├── subagent_stop.zig
-│       │   ├── pre_compact.zig
-│       │   └── pre_tool_use.zig
+│       │   └── pre_compact.zig
 │       └── lib/          # Shared modules
 │           ├── state_machine.zig
 │           ├── event_parser.zig
@@ -385,13 +366,11 @@ idle/
 │   ├── loop.md           # Main loop command
 │   └── cancel.md         # Loop cancellation
 ├── skills/
-│   ├── messaging/        # jwz coordination
-│   ├── issue-tracking/   # tissue integration
+│   ├── reviewing/        # Multi-model second opinions
 │   ├── researching/      # Quality-gated research
+│   ├── issue-tracking/   # tissue integration
 │   ├── technical-writing/# Document review
-│   ├── bib-managing/     # Bibliography curation
-│   ├── querying-codex/   # OpenAI second opinions
-│   └── querying-gemini/  # Google third opinions
+│   └── bib-managing/     # Bibliography curation
 ├── hooks/
 │   └── hooks.json        # Hook configuration (points to cli)
 ├── docs/
