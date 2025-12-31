@@ -143,6 +143,59 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     return 2; // Block exit for review
                 }
 
+                // Verify alice actually approved by checking for open alice-review issues
+                // This prevents bypassing re-review after alice says NEEDS_WORK
+                const open_issues = countOpenAliceReviewIssues(allocator);
+                if (open_issues > 0) {
+                    // Open issues exist - alice said NEEDS_WORK, block for re-review
+                    const ts = formatIso8601(now_ts);
+
+                    // Reset reviewed to false so next completion triggers alice again
+                    var rereview_state_buf: [2048]u8 = undefined;
+                    const rereview_state_json = std.fmt.bufPrint(&rereview_state_buf,
+                        \\{{"schema":1,"event":"STATE","run_id":"{s}","updated_at":"{s}","stack":[{{"id":"{s}","mode":"{s}","iter":{},"max":{},"prompt_file":"{s}","reviewed":false}}]}}
+                    , .{
+                        state.run_id,
+                        &ts,
+                        frame.id,
+                        @tagName(frame.mode),
+                        frame.iter,
+                        frame.max,
+                        frame.prompt_file,
+                    }) catch return 0;
+
+                    try postJwzMessage(allocator, "loop:current", rereview_state_json);
+
+                    // Build re-review instruction
+                    var reason_buf: [8192]u8 = undefined;
+                    const reason_len = (std.fmt.bufPrint(&reason_buf,
+                        \\[ISSUES REMAIN] You signaled completion but {} open alice-review issue(s) exist.
+                        \\
+                        \\Alice said NEEDS_WORK. You must fix all issues before completion is allowed.
+                        \\
+                        \\Check remaining issues: `tissue list -t alice-review --status open`
+                        \\
+                        \\For each issue:
+                        \\1. Fix the problem
+                        \\2. Close it: `tissue status <id> closed`
+                        \\
+                        \\After fixing ALL issues, signal completion again for re-review by alice.
+                    , .{open_issues}) catch return 0).len;
+
+                    // Output block decision
+                    var stdout_buf: [8192]u8 = undefined;
+                    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+                    const stdout = &stdout_writer.interface;
+
+                    var escaped_buf: [8192]u8 = undefined;
+                    const escaped = escapeJson(reason_buf[0..reason_len], &escaped_buf);
+
+                    try stdout.print("{{\"decision\":\"block\",\"reason\":\"{s}\"}}\n", .{escaped});
+                    try stdout.flush();
+
+                    return 2; // Block exit until issues are fixed
+                }
+
                 // Post completion state
                 const reason_str = @tagName(reason);
                 var done_buf: [256]u8 = undefined;
@@ -311,6 +364,34 @@ fn formatIso8601(ts: i64) [20]u8 {
         day_secs.getSecondsIntoMinute(),
     }) catch unreachable;
     return buf;
+}
+
+/// Count open alice-review issues via tissue CLI
+/// Returns 0 if tissue unavailable or no issues found
+fn countOpenAliceReviewIssues(allocator: std.mem.Allocator) u32 {
+    // Run tissue list -t alice-review --status open
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &.{ "tissue", "list", "-t", "alice-review", "--status", "open" },
+    }) catch return 0;
+
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+
+    // Count non-empty lines (each line is an issue)
+    if (result.stdout.len == 0) return 0;
+
+    var count: u32 = 0;
+    var lines = std.mem.splitScalar(u8, result.stdout, '\n');
+    while (lines.next()) |line| {
+        // Skip empty lines and header lines
+        const trimmed = std.mem.trim(u8, line, " \t\r");
+        if (trimmed.len == 0) continue;
+        // Skip header line (starts with "ID" typically)
+        if (std.mem.startsWith(u8, trimmed, "ID")) continue;
+        count += 1;
+    }
+    return count;
 }
 
 /// Escape string for JSON
