@@ -127,19 +127,26 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
 
                     // Build alice review instruction
                     const reason_str = @tagName(reason);
-                    var reason_buf: [4096]u8 = undefined;
+                    var reason_buf: [8192]u8 = undefined;
                     const reason_len = (std.fmt.bufPrint(&reason_buf,
                         \\[REVIEW REQUIRED] You signaled {s}. Before completing, invoke the alice agent to review your work.
                         \\
-                        \\Use the Task tool with subagent_type="idle:alice" to get a second opinion on:
-                        \\1. Whether the implementation is correct and complete
-                        \\2. Any architectural concerns or edge cases missed
-                        \\3. Whether {s} is the appropriate completion status
+                        \\Use the Task tool with subagent_type="idle:alice" to request adversarial review. Alice will:
+                        \\1. Systematically verify your implementation using domain-specific checklists
+                        \\2. Create tissue issues (tagged `alice-review`) for each problem found
+                        \\3. Get second opinions from Codex/Gemini on critical findings
+                        \\4. Give verdict: APPROVE (no issues) or NEEDS_WORK (issues created)
                         \\
-                        \\After receiving alice's review, either:
-                        \\- Signal completion again if alice approves
-                        \\- Continue working to address alice's feedback
-                    , .{ reason_str, reason_str }) catch return 0).len;
+                        \\After alice's review:
+                        \\- If APPROVE: Signal completion again
+                        \\- If NEEDS_WORK: Address each issue in `tissue list -t alice-review --status open`
+                        \\  - Fix the issue
+                        \\  - Close it: `tissue status <id> closed`
+                        \\  - Repeat until all alice-review issues are closed
+                        \\  - Signal completion again for re-review
+                        \\
+                        \\Alice will re-review and verify each fix. Loop continues until alice approves.
+                    , .{reason_str}) catch return 0).len;
 
                     // Output block decision
                     var stdout_buf: [8192]u8 = undefined;
