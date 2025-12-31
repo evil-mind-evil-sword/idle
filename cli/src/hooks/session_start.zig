@@ -5,6 +5,7 @@ const tissue = @import("tissue");
 const extractJsonString = idle.event_parser.extractString;
 
 /// Session start hook - injects loop context and agent awareness
+/// Outputs JSON format for Claude Code context injection
 pub fn run(allocator: std.mem.Allocator) !u8 {
     // Read hook input from stdin
     const stdin = std.fs.File.stdin();
@@ -16,9 +17,10 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     const cwd = extractJsonString(input_json, "\"cwd\"") orelse ".";
     std.posix.chdir(cwd) catch {};
 
-    var stdout_buf: [4096]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
-    const stdout = &stdout_writer.interface;
+    // Build context in memory using fixed buffer
+    var context_buf: [32768]u8 = undefined;
+    var context_stream = std.io.fixedBufferStream(&context_buf);
+    const writer = context_stream.writer();
 
     // Try to read active loop state
     const state_json = readJwzState(allocator) catch null;
@@ -36,23 +38,23 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
                     const frame = state.stack[state.stack.len - 1];
 
                     // Inject active loop context
-                    try stdout.writeAll("=== ACTIVE LOOP ===\n");
-                    try stdout.print("Mode: {s} | Iteration: {}/{}\n", .{
+                    try writer.writeAll("=== ACTIVE LOOP ===\n");
+                    try writer.print("Mode: {s} | Iteration: {}/{}\n", .{
                         @tagName(frame.mode),
                         frame.iter,
                         frame.max,
                     });
 
-                    try stdout.writeAll("\nYour task: Continue working on this loop. ");
-                    try stdout.writeAll("Signal <loop-done>COMPLETE</loop-done> when finished.\n");
-                    try stdout.writeAll("==================\n\n");
+                    try writer.writeAll("\nYour task: Continue working on this loop. ");
+                    try writer.writeAll("Signal <loop-done>COMPLETE</loop-done> when finished.\n");
+                    try writer.writeAll("==================\n\n");
                 }
             }
         }
     }
 
     // Always inject agent awareness
-    try stdout.writeAll(
+    try writer.writeAll(
         \\idle agents available:
         \\  - idle:alice: Deep reasoning, architecture review, quality gates
         \\                Consults multiple models for second opinions
@@ -68,15 +70,36 @@ pub fn run(allocator: std.mem.Allocator) !u8 {
     );
 
     // Inject ready issues from tissue
-    try injectReadyIssues(allocator, stdout);
+    try injectReadyIssuesTo(allocator, writer);
 
+    // Output as JSON for Claude Code
+    var stdout_buf: [65536]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buf);
+    const stdout = &stdout_writer.interface;
+
+    try stdout.writeAll("{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"");
+
+    // JSON-escape the context
+    const context_data = context_stream.getWritten();
+    for (context_data) |c| {
+        switch (c) {
+            '"' => try stdout.writeAll("\\\""),
+            '\\' => try stdout.writeAll("\\\\"),
+            '\n' => try stdout.writeAll("\\n"),
+            '\r' => try stdout.writeAll("\\r"),
+            '\t' => try stdout.writeAll("\\t"),
+            else => try stdout.writeByte(c),
+        }
+    }
+
+    try stdout.writeAll("\"}}\n");
     try stdout.flush();
 
     return 0;
 }
 
 /// Fetch and display ready issues from tissue
-fn injectReadyIssues(allocator: std.mem.Allocator, stdout: anytype) !void {
+fn injectReadyIssuesTo(allocator: std.mem.Allocator, stdout: anytype) !void {
     const store_dir = tissue.store.discoverStoreDir(allocator) catch return;
     defer allocator.free(store_dir);
 
