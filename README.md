@@ -21,7 +21,7 @@ This installs the plugin, installs/updates dependencies, and drops the correct `
 curl -fsSL https://github.com/evil-mind-evil-sword/idle/releases/latest/download/install.sh | sh
 ```
 
-This is the easiest way to get a working `bin/idle` on Linux and macOS (x86_64 + arm64). The repository itself currently contains a macOS arm64 binary in `bin/idle`.
+This is the easiest way to get a working `bin/idle` on Linux and macOS (x86_64 + arm64).
 
 ### Manual: Claude marketplace
 

@@ -1,3 +1,4 @@
 .tissue/
 tui/.zig-cache/
 tui/zig-out/
+bin/idle
