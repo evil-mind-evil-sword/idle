@@ -321,15 +321,15 @@ jobs:
 
               # tissue
               install_tool "tissue" "tissue" "evil-mind-evil-sword/tissue" \
-                  "TISSUE_INSTALL_DIR=$LOCAL_BIN curl -fsSL https://github.com/evil-mind-evil-sword/tissue/releases/latest/download/install.sh | sh"
+                  "curl -fsSL https://github.com/evil-mind-evil-sword/tissue/releases/latest/download/install.sh | TISSUE_INSTALL_DIR=$LOCAL_BIN sh"
 
               # jwz (zawinski)
               install_tool "jwz" "jwz" "evil-mind-evil-sword/zawinski" \
-                  "JWZ_INSTALL_DIR=$LOCAL_BIN curl -fsSL https://github.com/evil-mind-evil-sword/zawinski/releases/latest/download/install.sh | sh"
+                  "curl -fsSL https://github.com/evil-mind-evil-sword/zawinski/releases/latest/download/install.sh | JWZ_INSTALL_DIR=$LOCAL_BIN sh"
 
               # bibval
               install_tool "bibval" "bibval" "evil-mind-evil-sword/bibval" \
-                  "BIBVAL_INSTALL_DIR=$LOCAL_BIN curl -fsSL https://github.com/evil-mind-evil-sword/bibval/releases/latest/download/install.sh | sh"
+                  "curl -fsSL https://github.com/evil-mind-evil-sword/bibval/releases/latest/download/install.sh | BIBVAL_INSTALL_DIR=$LOCAL_BIN sh"
 
               printf "\n"
               info "Setting up Claude Code plugin..."
