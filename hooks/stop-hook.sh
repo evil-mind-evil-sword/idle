@@ -52,7 +52,7 @@ fi
 
 USER_REQUEST=""
 if command -v jwz &>/dev/null; then
-    USER_RAW=$(jwz read "$USER_CONTEXT_TOPIC" --json 2>/dev/null | jq '.[-1].body // empty' || echo "")
+    USER_RAW=$(jwz read "$USER_CONTEXT_TOPIC" --json 2>/dev/null | jq -r '.[-1].body // empty' || echo "")
     if [[ -n "$USER_RAW" ]]; then
         USER_REQUEST=$(echo "$USER_RAW" | jq -r '.prompt // ""' 2>/dev/null || echo "")
     fi
@@ -70,7 +70,7 @@ REVIEW_ENABLED=true
 REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
 if command -v jwz &>/dev/null; then
-    STATE_RAW=$(jwz read "$REVIEW_STATE_TOPIC" --json 2>/dev/null | jq '.[-1].body // empty' || echo "")
+    STATE_RAW=$(jwz read "$REVIEW_STATE_TOPIC" --json 2>/dev/null | jq -r '.[-1].body // empty' || echo "")
     if [[ -n "$STATE_RAW" ]]; then
         REVIEW_ENABLED_RAW=$(echo "$STATE_RAW" | jq -r '.enabled // true' 2>/dev/null || echo "true")
         [[ "$REVIEW_ENABLED_RAW" == "false" ]] && REVIEW_ENABLED=false
