@@ -61,7 +61,7 @@ fi
 
 # --- Parse #gate command (opt-in to alice review) ---
 
-if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]] && [[ "$USER_PROMPT" =~ ^#gate([[:space:]]|$) ]]; then
+if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]] && [[ "$USER_PROMPT" =~ ^#[Gg][Aa][Tt][Ee]([[:space:]]|$) ]]; then
     REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
     jwz topic new "$REVIEW_STATE_TOPIC" 2>/dev/null || true
     STATE_MSG=$(jq -n --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
