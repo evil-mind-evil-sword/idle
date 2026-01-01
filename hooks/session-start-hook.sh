@@ -82,11 +82,11 @@ You are running with the **idle** plugin, a quality gate system for Claude Code.
 
 Before exiting, you must spawn alice for review:
 - Use Task tool with \`subagent_type='idle:alice'\`
-- Prompt must be ONLY: \`SESSION_ID=<session_id>\`
-- Do NOT summarize your work or justify actions - alice forms her own judgment
+- Provide SESSION_ID and a factual list of changes (file + what changed)
+- Do NOT justify or editorialize - list facts only
 
-Alice will independently read the user's prompt transcript and examine your changes.
-She evaluates whether the USER'S request was satisfied, not your interpretation of it.
+Alice will independently read the user's prompt transcript from jwz.
+She evaluates whether the USER'S request was satisfied, not your interpretation.
 
 ### Available Tools
 
