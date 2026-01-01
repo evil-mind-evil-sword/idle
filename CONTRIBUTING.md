@@ -29,8 +29,8 @@ Thank you for your interest in contributing to idle!
 
 4. Test the stop hook:
    ```shell
-   # The stop hook will block exit until alice reviews
-   # Run /alice to trigger a review
+   # Use #gate in your prompt to enable alice review
+   # The stop hook will block exit until alice approves
    ```
 
 ## Adding a New Agent
@@ -109,17 +109,19 @@ Agents communicate via zawinski messaging (`jwz` CLI). All artifacts and finding
 Examples:
 [alice] ANALYSIS: Auth flow race condition
 [alice] DECISION: Use JWT with refresh tokens
-[loop] LANDED: issue-123
 ```
 
 ## Testing
 
-idle doesn't have automated tests. Manual testing workflow:
+```shell
+# Run hook tests
+bash tests/stop-hook-test.sh
+```
 
-1. Load the plugin with `claude --plugin-dir`
+For manual testing:
+1. Load the plugin with `claude --plugin-dir .`
 2. Invoke your agent/skill
 3. Verify it behaves as documented
-4. Test edge cases (missing dependencies, errors)
 
 ## Pull Request Process
 

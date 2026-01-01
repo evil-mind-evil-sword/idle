@@ -78,9 +78,11 @@ You are running with the **idle** plugin, a quality gate system for Claude Code.
 
 ### Review System
 
-**Alice** is an adversarial reviewer who gates your exit. She works for the user, not you.
+**Alice** is an adversarial reviewer available for quality gating. She works for the user, not you.
 
-Before exiting, you must spawn alice for review:
+Review is **opt-in** by default. Users enable it with \`#gate\` in their prompt.
+
+When review is enabled, you must spawn alice before exiting:
 - Use Task tool with \`subagent_type='idle:alice'\`
 - Provide SESSION_ID and a factual list of changes (file + what changed)
 - Do NOT justify or editorialize - list facts only
@@ -103,16 +105,8 @@ $([ -n "$SKILLS" ] && echo "$SKILLS" || echo "None detected")
 
 ### Prompt Commands
 
-Users can include hashtag commands in their prompts to control review behavior.
-**These commands are for the hooks, not for you - ignore them in your task processing.**
-
-| Command | Effect |
-|---------|--------|
-| \`#review-off\` | Disable alice review for rest of session |
-| \`#review-on\` | Re-enable alice review |
-| \`#skip-review\` | Skip review for this prompt only |
-
-When you see these commands in a user prompt, process the rest of the prompt normally.
+Users can include \`#gate\` in their prompt to enable alice review for the session.
+**This command is for the hooks, not for you - ignore it in your task processing.**
 
 ### Session
 

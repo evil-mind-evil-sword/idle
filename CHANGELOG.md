@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - **Zig CLI** - `cli/` directory and all Zig code removed
-- **Loop mode** - No more `/loop`, `/cancel`, iteration tracking
+- **Loop mode** - Removed loop commands and iteration tracking
 - **Complex state management** - No stack frames, completion signals, checkpoints
 - **Binary releases** - No platform-specific binaries to download
 
@@ -62,8 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Automatic infrastructure initialization** - SessionStart hook now initializes `.zawinski/`, `.tissue/`, and loop state automatically
-- **No manual `idle init-loop` needed** - Infrastructure is ready before any commands run
-- **Simplified `/loop` and `/init`** - Removed init-loop steps from command templates
+- **No manual init needed** - Infrastructure is ready before any commands run
+- **Simplified initialization** - Removed init-loop steps from command templates
 
 ## [1.7.1] - 2025-12-31
 
@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **`idle init-loop` now initializes tissue** - Single command sets up both `.zawinski/` and `.tissue/`
-- **Simplified `/init` and `/loop`** - No manual `tissue init` or `jwz init` needed
+- **Simplified initialization** - No manual `tissue init` or `jwz init` needed
 - **Updated install script** - Removed manual init steps from "Get started" message
 
 ### Dependencies
@@ -213,8 +213,8 @@ bob (orchestrator, opus)
 - Git config key: `idle.baseRef`
 - Temp directories: `/tmp/idle-*`
 - State files: `.claude/idle-loop.local.md`
-- Environment variable: `IDLE_LOOP_DISABLE`
-- Command namespaces: `idle:dev:*`, `idle:loop:*`
+- Environment variable for disabling hooks
+- Command namespaces updated
 - GitHub repository: `femtomc/idle`
 
 ## [0.6.1] - 2025-12-27
@@ -232,12 +232,12 @@ bob (orchestrator, opus)
 
 ### Added
 
-- **Git worktrees for issues** - Each `/issue` gets its own worktree for clean isolation
-- `/land <id>` command to merge completed issue branches
-- `/worktree` command for worktree management (list, status, remove, prune)
+- **Git worktrees for issues** - Each issue gets its own worktree for clean isolation
+- Land command to merge completed issue branches
+- Worktree command for worktree management (list, status, remove, prune)
 - Stop hook injects worktree context on each iteration
 - **Implementor agent** - Haiku-based execution agent for code changes, with Opus escalation
-- **Orchestrator pattern** - `/orchestrate` command for context-saving delegation
+- **Orchestrator pattern** - Orchestrate command for context-saving delegation
 - PreToolUse hook enforces orchestrator mode (blocks Write/Edit, redirects to implementor)
 - **Stop hook for loop commands** - Self-referential iteration via Claude Code hooks
 - **PreToolUse hook** - Safety guardrails blocking destructive git/bash commands
@@ -251,11 +251,11 @@ bob (orchestrator, opus)
 
 ### Changed
 
-- `/issue` creates worktree with branch `idle/issue/<id>`
+- Issue command creates worktree with branch `idle/issue/<id>`
 - Loop state includes worktree_path, branch, base_ref
 - Implementor agent updated with worktree instructions (absolute paths, cd prefix)
-- Loop commands (`/loop`, `/issue`, `/grind`) now use jwz for state management
-- `/cancel-loop` posts ABORT event to jwz and cleans up gracefully
+- Loop commands now use jwz for state management
+- Cancellation posts ABORT event to jwz and cleans up gracefully
 - Removed planner agent in favor of oracle
 - Prompts stored in temp files to avoid JSON escaping issues
 
@@ -268,9 +268,9 @@ bob (orchestrator, opus)
 ### Added
 
 - **Zawinski messaging integration** - Async topic-based messaging between agents (`jwz` CLI)
-- `/message` command for posting and reading messages
+- Message command for posting and reading messages
 - Messaging sections in all opus agents (oracle, reviewer, documenter) and librarian
-- Message status updates in `/grind` and `/issue` loop commands
+- Message status updates in loop commands
 - Topic naming convention: `project:`, `issue:`, `agent:`
 
 ### Changed
@@ -310,7 +310,7 @@ bob (orchestrator, opus)
 
 ### Added
 
-- `/document` command to invoke documenter agent
+- Document command to invoke documenter agent
 - State directory pattern for Codex/Gemini logs (`/tmp/idle-<agent>-$$`)
 - `---SUMMARY---` delimiter for Codex responses
 - `---DOCUMENT---` delimiter for Gemini responses
@@ -345,9 +345,9 @@ bob (orchestrator, opus)
 
 ### Changed
 
-- `/grind` now runs `/review` after each issue with iterative fix loop (max 3 rounds)
-- `/grind` files remaining review problems as new issues (tagged `review-followup`)
-- `/grind` max issues per session raised from 10 to 100
+- Grind command now runs review after each issue with iterative fix loop (max 3 rounds)
+- Grind files remaining review problems as new issues (tagged `review-followup`)
+- Grind max issues per session raised from 10 to 100
 
 ## [0.1.0] - 2025-12-27
 
@@ -360,18 +360,18 @@ bob (orchestrator, opus)
   - `documenter` - Technical writing with Gemini 3 Flash (opus)
   - `reviewer` - Code review with Codex dialogue (opus)
 
-- **Dev Commands**
-  - `/work` - Pick an issue and work it to completion
-  - `/fmt` - Auto-detect and run project formatter
-  - `/test` - Auto-detect and run project tests
-  - `/review` - Run code review via reviewer agent
-  - `/commit` - Commit staged changes with generated message
+- **Dev Commands** (removed in v2.2.0)
+  - Pick an issue and work it to completion
+  - Auto-detect and run project formatter
+  - Auto-detect and run project tests
+  - Run code review via reviewer agent
+  - Commit staged changes with generated message
 
-- **Loop Commands**
-  - `/loop <task>` - Iterative loop until task is complete
-  - `/grind [filter]` - Continuously work through issue tracker
-  - `/issue <id>` - Work on a specific tissue issue
-  - `/cancel-loop` - Cancel the active loop
+- **Loop Commands** (removed in v2.2.0)
+  - Iterative loop until task is complete
+  - Continuously work through issue tracker
+  - Work on a specific tissue issue
+  - Cancel active loops
 
 - Multi-model delegation pattern (haiku for fast tasks, opus for complex reasoning)
 - External model integration (Codex for diverse perspectives, Gemini for documentation)

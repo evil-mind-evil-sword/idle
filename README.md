@@ -29,8 +29,8 @@ Agent works → tries to exit → Stop hook → alice reviewed? → block/allow
 ```
 
 1. **Stop hook** intercepts every agent exit attempt
-2. Checks [jwz](https://github.com/evil-mind-evil-sword/zawinski) for alice's review decision
-3. If no review: blocks exit, directs agent to invoke `/alice`
+2. If `#gate` in prompt: checks [jwz](https://github.com/evil-mind-evil-sword/zawinski) for alice's review decision
+3. If review enabled but no approval: blocks exit, agent must spawn alice
 4. **alice** (adversarial reviewer) examines the work
 5. Creates [tissue](https://github.com/evil-mind-evil-sword/tissue) issues for problems found
 6. Posts decision: `COMPLETE` allows exit, `ISSUES` keeps agent working

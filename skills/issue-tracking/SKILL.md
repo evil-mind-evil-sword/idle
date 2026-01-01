@@ -101,8 +101,6 @@ tissue show <id>   # Lists blockers
 
 ## Workflow Integration
 
-### With /loop
-
 Use tissue to track work items. When working on an issue:
 1. Check `tissue ready` to see what's available
 2. Start working: `tissue status <id> in_progress`

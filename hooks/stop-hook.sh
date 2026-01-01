@@ -64,32 +64,23 @@ if [[ ${#USER_REQUEST_PREVIEW} -gt 200 ]]; then
     USER_REQUEST_PREVIEW="${USER_REQUEST_PREVIEW:0:200}..."
 fi
 
-# --- Check review state (sticky toggle via #review-off / #review-on) ---
+# --- Check review state (opt-in via #gate, default is off) ---
 
-REVIEW_ENABLED=true
+REVIEW_ENABLED=false
 REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
 if command -v jwz &>/dev/null; then
     STATE_RAW=$(jwz read "$REVIEW_STATE_TOPIC" --json 2>/dev/null | jq -r '.[0].body // empty' || echo "")
     if [[ -n "$STATE_RAW" ]]; then
-        REVIEW_ENABLED_RAW=$(echo "$STATE_RAW" | jq -r 'if has("enabled") then .enabled else true end' 2>/dev/null || echo "true")
-        [[ "$REVIEW_ENABLED_RAW" == "false" ]] && REVIEW_ENABLED=false
+        REVIEW_ENABLED_RAW=$(echo "$STATE_RAW" | jq -r 'if has("enabled") then .enabled else false end' 2>/dev/null || echo "false")
+        [[ "$REVIEW_ENABLED_RAW" == "true" ]] && REVIEW_ENABLED=true
     fi
 fi
 
-# --- Parse per-prompt command (#skip-review) ---
+# --- Handle review not enabled ---
 
-SKIP_REVIEW=false
-if [[ "$USER_REQUEST" =~ \#skip-review ]]; then
-    SKIP_REVIEW=true
-fi
-
-# --- Handle review skip (toggle or per-prompt) ---
-
-if [[ "$REVIEW_ENABLED" == "false" || "$SKIP_REVIEW" == "true" ]]; then
-    SKIP_REASON="Review skipped"
-    [[ "$REVIEW_ENABLED" == "false" ]] && SKIP_REASON="Review disabled (#review-off)"
-    [[ "$SKIP_REVIEW" == "true" ]] && SKIP_REASON="Review skipped (#skip-review)"
+if [[ "$REVIEW_ENABLED" == "false" ]]; then
+    SKIP_REASON="Review not enabled (use #gate to enable)"
 
     NOTIFY_TITLE="[$PROJECT_LABEL] Skipped Review"
     NOTIFY_BODY="**Task**
@@ -129,6 +120,13 @@ if [[ "$ALICE_DECISION" == "COMPLETE" || "$ALICE_DECISION" == "APPROVED" ]]; the
     REASON="alice approved"
     [[ -n "$ALICE_MSG_ID" ]] && REASON="$REASON (msg: $ALICE_MSG_ID)"
     [[ -n "$ALICE_SUMMARY" ]] && REASON="$REASON - $ALICE_SUMMARY"
+
+    # Reset review state - gate turns off after approval
+    if command -v jwz &>/dev/null; then
+        RESET_MSG=$(jq -n --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            '{enabled: false, timestamp: $ts}')
+        jwz post "$REVIEW_STATE_TOPIC" -m "$RESET_MSG" 2>/dev/null || true
+    fi
 
     # Post approval notification (to thread if exists)
     NOTIFY_TITLE="[$PROJECT_LABEL] Approved"

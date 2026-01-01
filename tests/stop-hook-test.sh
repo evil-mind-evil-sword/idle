@@ -47,17 +47,17 @@ test_case "stop_hook_active=true allows exit" "approve" '{
 }'
 
 # ============================================================================
-# TEST 2: No jwz, no tissue - should request review
+# TEST 2: No jwz, no tissue - review off by default, should approve
 # ============================================================================
 echo ""
-echo "--- Test 2: No review, no issues ---"
+echo "--- Test 2: No review enabled (default) ---"
 
 # Create a mock environment without jwz/tissue
 mkdir -p "$TEMP_DIR/no-tools"
 cd "$TEMP_DIR/no-tools"
 
-# Temporarily hide jwz and tissue from PATH
-test_case "No tools available requests review" "block" '{
+# Review is opt-in via #gate, so without it, exit is allowed
+test_case "No tools available, review not enabled" "approve" '{
   "session_id": "test-456",
   "cwd": "'"$TEMP_DIR/no-tools"'",
   "stop_hook_active": false
