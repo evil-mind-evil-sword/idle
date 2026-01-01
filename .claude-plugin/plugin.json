@@ -1,10 +1,12 @@
 {
   "name": "idle",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Quality gate for Claude Code. Every exit requires alice review. Skills: reviewing, researching, issue-tracking, technical-writing, bib-managing.",
   "author": {
     "name": "femtomc"
   },
-  "agents": ["./agents/alice.md"],
+  "agents": [
+    "./agents/alice.md"
+  ],
   "skills": "./skills/"
 }

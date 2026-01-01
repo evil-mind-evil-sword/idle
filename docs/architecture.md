@@ -194,6 +194,45 @@ idle/
 └── CONTRIBUTING.md
 ```
 
+## Version Management
+
+Uses **CalVer** (Calendar Versioning) with format **YY.M.D** (e.g., `26.1.15`).
+
+Three JSON files track the plugin version:
+
+| File | Location |
+|------|----------|
+| `plugin.json` | `idle/.claude-plugin/` |
+| `marketplace.json` | `idle/.claude-plugin/` |
+| `marketplace.json` | `marketplace/.claude-plugin/` |
+
+### Automatic Releases
+
+Push to monorepo `main` triggers automatic CalVer releases via `.github/workflows/release.yml`.
+
+### Manual Releases
+
+```bash
+# Calculate CalVer for idle
+./scripts/calver.sh idle
+
+# Or manually specify version
+./scripts/bump-idle-version.sh 26.1.15
+
+# Commit and push
+cd idle
+git add -A && git commit -m "chore: Release v26.1.15"
+cd ..
+./scripts/push-package.sh idle --release v26.1.15
+```
+
+### Installing/Updating Plugin
+
+```bash
+claude /plugin uninstall idle
+claude /plugin install idle@emes
+```
+
 ## Dependencies
 
 | Dependency | Purpose | Required |
