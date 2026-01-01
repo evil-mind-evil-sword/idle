@@ -24,6 +24,7 @@ cd "$CWD"
 # Get project info
 PROJECT_NAME=$(get_project_name "$CWD")
 GIT_BRANCH=$(get_git_branch "$CWD")
+REPO_URL=$(get_repo_url "$CWD")
 PROJECT_LABEL="$PROJECT_NAME"
 [[ -n "$GIT_BRANCH" ]] && PROJECT_LABEL="$PROJECT_NAME:$GIT_BRANCH"
 
@@ -37,7 +38,7 @@ if [[ -n "$USER_PROMPT" ]]; then
     NTFY_TITLE="[$PROJECT_LABEL] New task"
     NTFY_BODY="$PROMPT_PREVIEW"
 
-    ntfy_post "$NTFY_TITLE" "$NTFY_BODY" 3 "speech_balloon"
+    ntfy_post "$NTFY_TITLE" "$NTFY_BODY" 3 "speech_balloon" "$REPO_URL"
 fi
 
 # Store user message to jwz for alice context

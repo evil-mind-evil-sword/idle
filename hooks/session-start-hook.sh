@@ -22,6 +22,7 @@ cd "$CWD"
 # Get project info
 PROJECT_NAME=$(get_project_name "$CWD")
 GIT_BRANCH=$(get_git_branch "$CWD")
+REPO_URL=$(get_repo_url "$CWD")
 PROJECT_LABEL="$PROJECT_NAME"
 [[ -n "$GIT_BRANCH" ]] && PROJECT_LABEL="$PROJECT_NAME:$GIT_BRANCH"
 
@@ -67,7 +68,7 @@ Skills: ${SKILLS:-none}
 
 Session: ${SESSION_ID:0:8}"
 
-ntfy_post "$NTFY_TITLE" "$NTFY_BODY" 3 "rocket"
+ntfy_post "$NTFY_TITLE" "$NTFY_BODY" 3 "rocket" "$REPO_URL"
 
 # Build context message for agent
 CONTEXT="## idle Plugin Active
