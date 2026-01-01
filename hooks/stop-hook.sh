@@ -82,13 +82,11 @@ if [[ "$ALICE_DECISION" == "COMPLETE" || "$ALICE_DECISION" == "APPROVED" ]]; the
 
     # Post approval notification
     NOTIFY_TITLE="[$PROJECT_LABEL] Approved"
-    NOTIFY_BODY="\`\`\`
-┌─ Task ─────────────────────────────
-│  $USER_REQUEST_PREVIEW
-├─ Result ───────────────────────────
-│  $ALICE_SUMMARY
-└────────────────────────────────────
-\`\`\`"
+    NOTIFY_BODY="**Task**
+> $USER_REQUEST_PREVIEW
+
+**Result**
+$ALICE_SUMMARY"
     notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 3 "white_check_mark" "$REPO_URL"
 
     jq -n --arg reason "$REASON" '{decision: "approve", reason: $reason}'
@@ -109,19 +107,17 @@ alice says: $ALICE_MESSAGE"
 
     # Post block notification (high priority)
     NOTIFY_TITLE="[$PROJECT_LABEL] Blocked"
-    NOTIFY_BODY="\`\`\`
-┌─ Task ─────────────────────────────
-│  $USER_REQUEST_PREVIEW
-├─ Issues ───────────────────────────
-│  $ALICE_SUMMARY"
+    NOTIFY_BODY="**Task**
+> $USER_REQUEST_PREVIEW
+
+**Issues**
+$ALICE_SUMMARY"
     if [[ -n "$ALICE_MESSAGE" ]]; then
         NOTIFY_BODY="$NOTIFY_BODY
-├─ Action Required ──────────────────
-│  $ALICE_MESSAGE"
+
+**Action Required**
+$ALICE_MESSAGE"
     fi
-    NOTIFY_BODY="$NOTIFY_BODY
-└────────────────────────────────────
-\`\`\`"
     notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 5 "x" "$REPO_URL"
 
     jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
@@ -138,14 +134,11 @@ Alice will read your conversation context and decide if the work is complete or 
 
 # Post pending review notification
 NOTIFY_TITLE="[$PROJECT_LABEL] Awaiting Review"
-NOTIFY_BODY="\`\`\`
-┌─ Task ─────────────────────────────
-│  $USER_REQUEST_PREVIEW
-├─ Status ───────────────────────────
-│  Agent exiting without alice review
-│  Spawning alice for approval...
-└────────────────────────────────────
-\`\`\`"
+NOTIFY_BODY="**Task**
+> $USER_REQUEST_PREVIEW
+
+**Status**
+Agent exiting without alice review. Spawning alice for approval..."
 notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 4 "hourglass" "$REPO_URL"
 
 jq -n --arg reason "$REASON" '{decision: "block", reason: $reason}'
