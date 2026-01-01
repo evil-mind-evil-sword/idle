@@ -7,12 +7,10 @@ get_project_name() {
     local cwd="${1:-.}"
     local name=""
 
-    # Try git remote first
     if command -v git &>/dev/null; then
         name=$(git -C "$cwd" remote get-url origin 2>/dev/null | sed -E 's/.*[:/]([^/]+)\/([^/.]+)(\.git)?$/\2/' || true)
     fi
 
-    # Fall back to directory basename
     if [[ -z "$name" ]]; then
         name=$(basename "$(cd "$cwd" && pwd)")
     fi
@@ -41,38 +39,19 @@ get_repo_url() {
     fi
 
     # Convert SSH to HTTPS URL
-    # git@github.com:user/repo.git -> https://github.com/user/repo
     if [[ "$remote_url" == git@* ]]; then
         remote_url=$(echo "$remote_url" | sed -E 's/git@([^:]+):/https:\/\/\1\//' | sed 's/\.git$//')
     fi
 
-    # Clean up .git suffix from HTTPS URLs
     remote_url="${remote_url%.git}"
-
     echo "$remote_url"
 }
 
-# Unified notification function - dispatches to Discord or ntfy
+# Post notification to Discord
 # Usage: notify "title" "body" [priority] [emoji] [repo_url]
-# Priority: 1=min, 2=low, 3=default, 4=high, 5=urgent
+# Priority: 1-2=gray, 3=blue, 4=yellow, 5=red
+# Emoji: rocket, speech_balloon, white_check_mark, x, hourglass
 notify() {
-    local title="$1"
-    local body="$2"
-    local priority="${3:-3}"
-    local emoji="${4:-}"
-    local repo_url="${5:-}"
-
-    # Prefer Discord if configured, fall back to ntfy
-    if [[ -n "${IDLE_DISCORD_WEBHOOK:-}" ]]; then
-        discord_post "$title" "$body" "$priority" "$emoji" "$repo_url"
-    elif [[ -n "${IDLE_NTFY_TOPIC:-}" ]]; then
-        ntfy_post "$title" "$body" "$priority" "$emoji" "$repo_url"
-    fi
-}
-
-# Post to Discord webhook with rich embed
-# Colors: green=5763719, red=15548997, yellow=16705372, blue=5793266, gray=9807270
-discord_post() {
     local title="$1"
     local body="$2"
     local priority="${3:-3}"
@@ -87,15 +66,15 @@ discord_post() {
     # Map priority to color
     local color=5793266  # blue (default)
     case "$priority" in
-        5) color=15548997 ;;    # red (urgent - blocked)
-        4) color=16705372 ;;    # yellow (high - warning)
+        5) color=15548997 ;;    # red (urgent)
+        4) color=16705372 ;;    # yellow (warning)
         1|2) color=9807270 ;;   # gray (low)
     esac
 
-    # Override color based on emoji for clearer visual
+    # Override color based on emoji
     case "$emoji" in
-        white_check_mark) color=5763719 ;;  # green for approved
-        x) color=15548997 ;;                 # red for blocked
+        white_check_mark) color=5763719 ;;  # green
+        x) color=15548997 ;;                 # red
     esac
 
     # Map emoji tag to actual emoji
@@ -108,14 +87,11 @@ discord_post() {
         hourglass) emoji_char="⏳" ;;
     esac
 
-    # Prepend emoji to title if present
     [[ -n "$emoji_char" ]] && title="$emoji_char $title"
 
-    # Get timestamp
     local timestamp
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Build JSON payload with timestamp
     local payload
     if [[ -n "$repo_url" ]]; then
         payload=$(jq -n \
@@ -134,44 +110,7 @@ discord_post() {
             '{embeds: [{title: $title, description: $desc, color: $color, timestamp: $ts}]}')
     fi
 
-    # Post in background to not block hook
     curl -s -X POST -H "Content-Type: application/json" -d "$payload" "$webhook" &>/dev/null &
-}
-
-# Post to ntfy with rich formatting (legacy, kept for compatibility)
-ntfy_post() {
-    local title="$1"
-    local body="$2"
-    local priority="${3:-3}"
-    local tags="${4:-}"
-    local click_url="${5:-}"
-
-    local topic="${IDLE_NTFY_TOPIC:-}"
-    if [[ -z "$topic" ]]; then
-        return 0
-    fi
-
-    local server="${IDLE_NTFY_SERVER:-https://ntfy.sh}"
-    local url="$server/$topic"
-
-    local -a args=(
-        -s
-        -X POST
-        -H "Title: $title"
-        -H "Priority: $priority"
-    )
-
-    if [[ -n "$tags" ]]; then
-        args+=(-H "Tags: $tags")
-    fi
-
-    if [[ -n "$click_url" ]]; then
-        args+=(-H "Actions: view, Open Repo, $click_url")
-    fi
-
-    args+=(-d "$body" "$url")
-
-    curl "${args[@]}" &>/dev/null &
 }
 
 # Format tool availability as checkmarks
