@@ -22,6 +22,14 @@ Research on multi-agent debate suggests a path forward: models produce more accu
 
 idle applies this idea: rather than prompting agents to review themselves, it blocks exit until an independent reviewer (alice, a subagent) explicitly approves.
 
+## Usage
+
+```
+#idle <your prompt>
+```
+
+Review is opt-in per-prompt. After alice approves, the gate resets automatically.
+
 ## How It Works
 
 ```
@@ -29,12 +37,11 @@ Agent works → tries to exit → Stop hook → alice reviewed? → block/allow
 ```
 
 1. **Stop hook** intercepts every agent exit attempt
-2. Add `#idle` to the start of prompt: enables review mode via [jwz](https://github.com/evil-mind-evil-sword/zawinski)
-3. Review mode is per prompt: use the hash command again when useful.
-4. If review enabled but no approval: blocks exit, agent must spawn alice
-5. **alice** (adversarial reviewer) examines the work
-6. Creates [tissue](https://github.com/evil-mind-evil-sword/tissue) issues for problems found
-7. Posts decision: `COMPLETE` allows exit, `ISSUES` keeps agent working
+2. `#idle` at start of prompt enables review via [jwz](https://github.com/evil-mind-evil-sword/zawinski)
+3. If review enabled but no approval: blocks exit, agent must spawn alice
+4. **alice** (adversarial reviewer) examines the work
+5. Creates [tissue](https://github.com/evil-mind-evil-sword/tissue) issues for problems found
+6. Posts decision: `COMPLETE` allows exit, `ISSUES` keeps agent working
 
 No issues = exit allowed. Issues exist = fix them first.
 
@@ -146,13 +153,6 @@ idle complements these tools by adding a review step before the agent exits.
 | codex | OpenAI CLI for second opinions (reviewing skill) | Optional |
 | gemini | Google CLI for second opinions (reviewing skill) | Optional |
 | [bibval](https://github.com/evil-mind-evil-sword/bibval) | Citation validation (bib-managing skill) | Optional |
-
-## Escape Hatches
-
-| Method | Effect |
-|--------|--------|
-| `.idle-disabled` file in project root | Bypass stop hook entirely |
-| `#idle:off` | Disable review for session |
 
 ## Project Structure
 

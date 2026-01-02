@@ -84,7 +84,7 @@ fi
 echo ""
 echo "Installation complete!"
 echo ""
-echo "The idle plugin is now active. Use #idle:on to enable review, #idle:off to disable."
+echo "The idle plugin is now active. Use #idle to enable review."
 echo ""
 echo "Dependencies installed:"
 echo "  jwz     - Agent messaging"

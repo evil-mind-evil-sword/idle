@@ -29,8 +29,7 @@ Thank you for your interest in contributing to idle!
 
 4. Test the stop hook:
    ```shell
-   # Use #idle:on in your prompt to enable alice review
-   # Use #idle:off to disable review mode
+   # Use #idle in your prompt to enable alice review
    # The stop hook will block exit until alice approves
    ```
 

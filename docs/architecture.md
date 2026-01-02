@@ -1,6 +1,14 @@
 # idle Architecture
 
-**idle** is a quality gate plugin for Claude Code. Users opt into alice review via `#idle:on` (disable with `#idle:off`).
+**idle** is a quality gate plugin for Claude Code.
+
+## Usage
+
+```
+#idle <your prompt>
+```
+
+Review is opt-in per-prompt. After alice approves, the gate resets automatically.
 
 ## Design Philosophy
 
@@ -58,7 +66,7 @@ Agent tries to exit
         ▼
    stop-hook.sh
         │
-        ├─► Check if #idle:on enabled review
+        ├─► Check if #idle enabled review
         │   └─► Not enabled? → allow exit
         │
         ├─► Check jwz for alice decision
@@ -240,13 +248,6 @@ claude /plugin install idle@emes
 | jwz | Agent messaging | Yes |
 | tissue | Issue tracking | Yes |
 | jq | JSON parsing in hooks | Yes |
-
-## Escape Hatches
-
-| Method | Effect |
-|--------|--------|
-| `.idle-disabled` file | Bypass stop hook |
-| `#idle:off` | Disable review for session |
 
 ## References
 

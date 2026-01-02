@@ -19,7 +19,7 @@ cd "$CWD"
 ALICE_TOPIC="alice:status:$SESSION_ID"
 REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
-# --- Check review state (opt-in via #idle:on, opt-out via #idle:off) ---
+# --- Check review state (opt-in via #idle) ---
 
 if ! command -v jwz &>/dev/null; then
     # Fail open - review system can't function without jwz
@@ -40,15 +40,15 @@ set -e
 # Determine review state
 if [[ $JWZ_EXIT -ne 0 ]]; then
     # jwz command failed
-    if command grep -q "Topic not found" "$JWZ_TMPFILE"; then
-        # Topic doesn't exist - #idle:on was never used, approve
+    if command grep -q "Topic not found" "$JWZ_TMPFILE" || command grep -q "No store found" "$JWZ_TMPFILE"; then
+        # Topic or store doesn't exist - #idle was never used, approve
         jq -n '{decision: "approve", reason: "Review not enabled"}'
         exit 0
     else
-        # Unknown jwz error - fail open
+        # Unknown jwz error - fail closed (user opted in, something is wrong)
         ERR_MSG=$(cat "$JWZ_TMPFILE")
-        printf "idle: WARNING: jwz error - review system bypassed: %s\n" "$ERR_MSG" >&2
-        jq -n --arg err "$ERR_MSG" '{decision: "approve", reason: ("jwz error - review bypassed: " + $err)}'
+        printf "idle: ERROR: jwz error while checking review state: %s\n" "$ERR_MSG" >&2
+        jq -n --arg err "$ERR_MSG" '{decision: "block", reason: ("jwz error - review state unknown, blocking to be safe: " + $err)}'
         exit 0
     fi
 fi
@@ -56,21 +56,21 @@ fi
 # jwz succeeded - parse the response
 
 # First check if topic is empty (exists but no messages)
-# This happens when #idle:on was used but jwz post failed silently
+# This happens when #idle was used but jwz post failed silently
 TOPIC_LENGTH=$(jq 'length' "$JWZ_TMPFILE" 2>/dev/null || echo "0")
 if [[ "$TOPIC_LENGTH" == "0" ]]; then
-    # Topic exists but is empty - #idle:on was attempted but failed
+    # Topic exists but is empty - #idle was attempted but failed
     # Fail CLOSED (block) rather than open
-    printf "idle: ERROR: review:state topic exists but is empty - #idle:on may have failed\n" >&2
-    jq -n '{decision: "block", reason: "Review state corrupted: topic exists but is empty. This suggests #idle:on failed to post state. Please re-run #idle:on or use #idle:off to explicitly disable review."}'
+    printf "idle: ERROR: review:state topic exists but is empty - #idle may have failed\n" >&2
+    jq -n '{decision: "block", reason: "Review state corrupted: topic exists but is empty. This suggests #idle failed to post state. Please re-run #idle."}'
     exit 0
 fi
 
 REVIEW_ENABLED_RAW=$(jq -r '.[0].body | fromjson | .enabled' "$JWZ_TMPFILE" 2>/dev/null || echo "")
 if [[ -z "$REVIEW_ENABLED_RAW" || "$REVIEW_ENABLED_RAW" == "null" ]]; then
-    # Can't parse enabled field - fail open
-    printf "idle: WARNING: Failed to parse review state - review bypassed\n" >&2
-    jq -n '{decision: "approve", reason: "Failed to parse review state - review bypassed"}'
+    # Can't parse enabled field - fail closed (state exists but corrupted)
+    printf "idle: ERROR: Failed to parse review state - blocking to be safe\n" >&2
+    jq -n '{decision: "block", reason: "Failed to parse review state - state may be corrupted."}'
     exit 0
 fi
 

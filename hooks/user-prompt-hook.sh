@@ -18,13 +18,13 @@ IDLE_MODE_MSG=""
 
 cd "$CWD"
 
-# --- Parse #idle:on / #idle:off commands ---
+# --- Parse #idle command ---
 
 if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]]; then
     REVIEW_STATE_TOPIC="review:state:$SESSION_ID"
 
-    if [[ "$USER_PROMPT" =~ ^#[Ii][Dd][Ll][Ee]:[Oo][Nn]([[:space:]]|$) ]]; then
-        # Turn on review
+    if [[ "$USER_PROMPT" =~ ^#[Ii][Dd][Ll][Ee]([[:space:]]|$) ]]; then
+        # Turn on review for this prompt
         jwz topic new "$REVIEW_STATE_TOPIC" 2>/dev/null || true
         STATE_MSG=$(jq -n --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
             '{enabled: true, timestamp: $ts}')
@@ -32,16 +32,6 @@ if command -v jwz &>/dev/null && [[ -n "$USER_PROMPT" ]]; then
             IDLE_MODE_MSG="idle: review mode ON"
         else
             IDLE_MODE_MSG="idle: WARNING - failed to enable review mode"
-        fi
-    elif [[ "$USER_PROMPT" =~ ^#[Ii][Dd][Ll][Ee]:[Oo][Ff][Ff]([[:space:]]|$) ]]; then
-        # Turn off review
-        jwz topic new "$REVIEW_STATE_TOPIC" 2>/dev/null || true
-        STATE_MSG=$(jq -n --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-            '{enabled: false, timestamp: $ts}')
-        if jwz post "$REVIEW_STATE_TOPIC" -m "$STATE_MSG" 2>/dev/null; then
-            IDLE_MODE_MSG="idle: review mode OFF"
-        else
-            IDLE_MODE_MSG="idle: WARNING - failed to disable review mode"
         fi
     fi
 fi
