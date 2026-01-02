@@ -40,7 +40,7 @@ JWZ_TMPFILE=$(mktemp)
 trap "rm -f $JWZ_TMPFILE" EXIT
 
 set +e
-jwz read "$REVIEW_STATE_TOPIC" --json > "$JWZ_TMPFILE" 2>&1
+jwz list "$REVIEW_STATE_TOPIC" --json > "$JWZ_TMPFILE" 2>&1
 JWZ_EXIT=$?
 set -e
 
@@ -94,7 +94,7 @@ ALICE_MSG_ID=""
 ALICE_SUMMARY=""
 ALICE_MESSAGE=""
 
-LATEST_RAW=$(jwz read "$ALICE_TOPIC" --json 2>/dev/null | jq '.[0] // empty' || echo "")
+LATEST_RAW=$(jwz list "$ALICE_TOPIC" --json 2>/dev/null | jq '.[0] // empty' || echo "")
 if [[ -n "$LATEST_RAW" ]]; then
     ALICE_MSG_ID=$(echo "$LATEST_RAW" | jq -r '.id // ""')
     LATEST_BODY=$(echo "$LATEST_RAW" | jq -r '.body // ""')

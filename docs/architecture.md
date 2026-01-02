@@ -151,7 +151,7 @@ Git-native issue tracker.
 Alice creates issues tagged `alice-review`:
 
 ```bash
-tissue new "Missing error handling in auth flow" -t alice-review -p 2
+tissue post "Missing error handling in auth flow" -t alice-review -p 2
 ```
 
 The stop hook checks for open alice-review issues before allowing exit.
