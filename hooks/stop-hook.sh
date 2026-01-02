@@ -162,6 +162,9 @@ SESSION_ID=$SESSION_ID
 
 ### Planning outcomes (if you made or refined a plan):
 - <decision or step>: <the outcome>
+
+### Open questions (if you have gaps or uncertainties):
+- <question>: <why it matters or what's blocking>
 ---
 
 RULES:

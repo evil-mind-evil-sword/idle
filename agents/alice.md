@@ -193,8 +193,52 @@ Include `prior_art` when context gathering revealed relevant information:
 - External research findings (with sources)
 - Historical issues or patterns to be aware of
 
+## Handling Open Questions
+
+The agent may surface gaps or uncertainties in their "Open questions" section. These are
+not failures—they're honest acknowledgment of limits. Your job is to help resolve them.
+
+For each open question:
+
+1. **Assess whether it's blocking**: Does this need resolution now, or can work proceed?
+2. **Seek consensus**: Use the reviewing skill or external models to gather perspectives:
+
+```bash
+# For substantive questions, get multi-model consensus
+/reviewing "The agent asks: <question>. Context: <relevant info>. What's the right approach?"
+```
+
+Or directly:
+
+```bash
+codex exec -s read-only -m gpt-5.2 -c reasoning=xhigh "
+Question from agent: <question>
+Context: <what they were working on>
+
+What's the right answer or approach? Be specific.
+"
+
+gemini -s -m gemini-3-pro-preview "
+<same prompt>
+"
+```
+
+3. **Synthesize and respond**: Include your answer in `message_to_agent`:
+
+```json
+{
+  "decision": "ISSUES",
+  "summary": "Work is good, but open questions need resolution",
+  "message_to_agent": "Re: <question> — Consensus view: <answer>. Proceed with <recommendation>."
+}
+```
+
+If questions are truly blocking, mark ISSUES with guidance. If they're minor uncertainties
+that don't affect correctness, you can mark COMPLETE with advisory notes.
+
 ## Calibration
 
 - Trivial Q&A → COMPLETE immediately (no deep review needed)
 - Any real work → Full deep reasoning + second opinions
+- Open questions → Seek consensus, provide guidance
 - When uncertain → Err toward ISSUES, explain uncertainty
