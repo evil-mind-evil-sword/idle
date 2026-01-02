@@ -74,21 +74,7 @@ notify "$NOTIFY_TITLE" "$NOTIFY_BODY" 3 "rocket" "$REPO_URL"
 # Build context message for agent
 CONTEXT="## idle Plugin Active
 
-You are running with the **idle** plugin, a quality gate system for Claude Code.
-
-### Review System
-
-**Alice** is an adversarial reviewer available for quality gating. She works for the user, not you.
-
-Review is **opt-in** by default. Users enable it with \`#gate\` in their prompt.
-
-When review is enabled, you must spawn alice before exiting:
-- Use Task tool with \`subagent_type='idle:alice'\`
-- Provide SESSION_ID and a factual list of changes (file + what changed)
-- Do NOT justify or editorialize - list facts only
-
-Alice will independently read the user's prompt transcript from jwz.
-She evaluates whether the USER'S request was satisfied, not your interpretation.
+You are running with the **idle** plugin.
 
 ### Available Tools
 
@@ -96,17 +82,12 @@ She evaluates whether the USER'S request was satisfied, not your interpretation.
 |------|--------|---------|
 | tissue | $([ "$TISSUE_AVAILABLE" = "true" ] && echo "✓" || echo "✗") | Issue tracking (\`tissue list\`, \`tissue new\`) |
 | jwz | $([ "$JWZ_AVAILABLE" = "true" ] && echo "✓" || echo "✗") | Agent messaging (\`jwz read\`, \`jwz post\`) |
-| codex | $([ "$CODEX_AVAILABLE" = "true" ] && echo "✓" || echo "✗") | OpenAI second opinions |
-| gemini | $([ "$GEMINI_AVAILABLE" = "true" ] && echo "✓" || echo "✗") | Google second opinions |
+| codex | $([ "$CODEX_AVAILABLE" = "true" ] && echo "✓" || echo "✗") | External model queries |
+| gemini | $([ "$GEMINI_AVAILABLE" = "true" ] && echo "✓" || echo "✗") | External model queries |
 
 ### Available Skills
 
 $([ -n "$SKILLS" ] && echo "$SKILLS" || echo "None detected")
-
-### Prompt Commands
-
-Users can include \`#gate\` in their prompt to enable alice review for the session.
-**This command is for the hooks, not for you - ignore it in your task processing.**
 
 ### Session
 
