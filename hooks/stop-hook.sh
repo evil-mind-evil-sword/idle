@@ -99,15 +99,16 @@ if [[ $JWZ_EXIT -ne 0 ]]; then
 fi
 
 # jwz succeeded - parse the response directly from file
-REVIEW_ENABLED_RAW=$(jq -r '.[0].body | fromjson | .enabled // empty' "$JWZ_TMPFILE" 2>/dev/null)
-if [[ -z "$REVIEW_ENABLED_RAW" ]]; then
+# Note: don't use // with booleans as jq treats false as falsy
+REVIEW_ENABLED_RAW=$(jq -r '.[0].body | fromjson | .enabled' "$JWZ_TMPFILE" 2>/dev/null)
+if [[ -z "$REVIEW_ENABLED_RAW" || "$REVIEW_ENABLED_RAW" == "null" ]]; then
     # Can't parse enabled field - fail closed
     jq -n '{decision: "block", reason: "Failed to parse review state"}'
     exit 0
 fi
 
 if [[ "$REVIEW_ENABLED_RAW" != "true" ]]; then
-    # enabled is explicitly false or something else - approve
+    # enabled is explicitly false - approve
     jq -n '{decision: "approve", reason: "Review not enabled"}'
     exit 0
 fi
