@@ -59,6 +59,7 @@ fn printUsage(stdout: anytype) !void {
         \\
         \\Commands:
         \\  trace <session_id>    Show trace for a session
+        \\    -v, --verbose       Show detailed tool inputs and outputs
         \\    --format <fmt>      Output format: text (default), dot, json
         \\    --jwz <path>        Path to jwz store (auto-discovered if omitted)
         \\    --tissue <path>     Path to tissue store (auto-discovered if omitted)
@@ -71,6 +72,7 @@ fn printUsage(stdout: anytype) !void {
         \\
         \\Examples:
         \\  idle trace abc123-def456
+        \\  idle trace abc123-def456 -v
         \\  idle trace abc123-def456 --format dot > trace.dot
         \\  idle sessions --limit 5
         \\
@@ -86,6 +88,7 @@ fn cmdTrace(allocator: std.mem.Allocator, stdout: anytype, args: []const []const
 
     const session_id = args[0];
     var format: []const u8 = "text";
+    var verbose: bool = false;
     var jwz_path: ?[]const u8 = null;
     var tissue_path: ?[]const u8 = null;
 
@@ -96,6 +99,8 @@ fn cmdTrace(allocator: std.mem.Allocator, stdout: anytype, args: []const []const
         if (std.mem.eql(u8, arg, "--format") and i + 1 < args.len) {
             i += 1;
             format = args[i];
+        } else if (std.mem.eql(u8, arg, "-v") or std.mem.eql(u8, arg, "--verbose")) {
+            verbose = true;
         } else if (std.mem.eql(u8, arg, "--jwz") and i + 1 < args.len) {
             i += 1;
             jwz_path = args[i];
@@ -119,7 +124,7 @@ fn cmdTrace(allocator: std.mem.Allocator, stdout: anytype, args: []const []const
 
     // Render output
     if (std.mem.eql(u8, format, "text")) {
-        try trace_obj.renderText(stdout);
+        try trace_obj.renderText(stdout, .{ .verbose = verbose });
     } else if (std.mem.eql(u8, format, "dot")) {
         try trace_obj.renderDot(stdout);
     } else if (std.mem.eql(u8, format, "json")) {

@@ -179,8 +179,13 @@ pub const Trace = struct {
         };
     }
 
+    /// Options for text rendering
+    pub const RenderOptions = struct {
+        verbose: bool = false,
+    };
+
     /// Render trace as text
-    pub fn renderText(self: *const Trace, writer: anytype) !void {
+    pub fn renderText(self: *const Trace, writer: anytype, options: RenderOptions) !void {
         try writer.print("=== Session {s} ===\n\n", .{self.session_id});
 
         if (self.events.len == 0) {
@@ -214,11 +219,70 @@ pub const Trace = struct {
                 // Show message ID (first 8 chars)
                 const id_preview = if (event.id.len > 8) event.id[0..8] else event.id;
                 try writer.print(" ({s})\n", .{id_preview});
+
+                // Verbose mode: show tool input/output details
+                if (options.verbose) {
+                    if (event.event_type == .tool_completed or event.event_type == .tool_called) {
+                        // Show tool input
+                        if (extractJsonField(event.payload_json, "tool_input")) |input| {
+                            try writer.writeAll("    Input: ");
+                            try writeJsonCompact(writer, input);
+                            try writer.writeAll("\n");
+                        }
+                        // Show tool response for completed tools
+                        if (event.event_type == .tool_completed) {
+                            if (extractJsonField(event.payload_json, "tool_response")) |response| {
+                                try writer.writeAll("    Response: ");
+                                try writeJsonCompact(writer, response);
+                                try writer.writeAll("\n");
+                            }
+                        }
+                    }
+                }
             }
         }
 
         try writer.print("\n{d} events total\n", .{self.events.len});
         try writer.writeAll("=== End Session ===\n");
+    }
+
+    /// Write JSON string in compact form, unescaping and truncating if too long
+    fn writeJsonCompact(writer: anytype, json: []const u8) !void {
+        const max_len: usize = 200;
+        var written: usize = 0;
+        var i: usize = 0;
+
+        while (i < json.len and written < max_len) {
+            const c = json[i];
+
+            // Handle escape sequences
+            if (c == '\\' and i + 1 < json.len) {
+                const next = json[i + 1];
+                switch (next) {
+                    'n' => {
+                        try writer.writeByte(' ');
+                        written += 1;
+                        i += 2;
+                        continue;
+                    },
+                    '"', '\\', '/' => {
+                        try writer.writeByte(next);
+                        written += 1;
+                        i += 2;
+                        continue;
+                    },
+                    else => {},
+                }
+            }
+
+            try writer.writeByte(c);
+            written += 1;
+            i += 1;
+        }
+
+        if (i < json.len) {
+            try writer.writeAll("...");
+        }
     }
 
     /// Extract a string field from JSON payload (simple parser)
