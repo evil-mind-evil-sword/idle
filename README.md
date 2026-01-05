@@ -154,6 +154,37 @@ idle complements these tools by adding a review step before the agent exits.
 | gemini | Google CLI for second opinions (reviewing skill) | Optional |
 | [bibval](https://github.com/evil-mind-evil-sword/bibval) | Citation validation (bib-managing skill) | Optional |
 
+## Session Traces
+
+idle captures session events for post-hoc analysis via the `idle` CLI:
+
+```bash
+# Show trace for a session
+idle trace <session_id>
+
+# Verbose mode - see tool inputs and outputs
+idle trace <session_id> -v
+
+# Export as GraphViz DOT
+idle trace <session_id> --format dot > trace.dot
+```
+
+**Example output:**
+
+```
+=== Session abc123 ===
+
+[1] prompt_received: "Fix the auth bug" (01KE5DEF)
+[2] tool_completed: Read (01KE5GHI)
+[3] tool_completed: Edit (01KE5JKL)
+[4] tool_completed: Bash [FAILED] (01KE5MNO)
+
+4 events total
+=== End Session ===
+```
+
+Traces help debug tool failures and understand agent behavior.
+
 ## Project Structure
 
 ```
@@ -172,6 +203,10 @@ idle/
 │   ├── issue-tracking/    # tissue integration
 │   ├── technical-writing/ # Document review
 │   └── bib-managing/      # Bibliography curation
+├── src/                   # Zig CLI source
+│   ├── main.zig
+│   ├── root.zig
+│   └── trace.zig
 ├── docs/
 │   ├── architecture.md    # Detailed design
 │   └── references.bib     # Academic sources

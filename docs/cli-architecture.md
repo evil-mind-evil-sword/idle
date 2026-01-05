@@ -89,19 +89,31 @@ This allows idle to:
 
 ## CLI Commands
 
-### Phase 1: Trace Queries
+### Phase 1: Trace Queries (Implemented)
 
 ```bash
 # Show trace for a session
 idle trace <session_id>
-idle trace <session_id> --format text|dot|json
+idle trace <session_id> -v              # Verbose: show tool inputs/outputs
+idle trace <session_id> --format dot    # Export as GraphViz
 
 # List recent sessions
 idle sessions
 idle sessions --limit 10
 
-# Show session details
-idle session <session_id>
+# Show version
+idle version
+```
+
+**Verbose mode** shows full tool invocation details:
+
+```
+[1] tool_completed: Read [FAILED] (01KE5PXH)
+    Input: {"file_path":"/nonexistent"}
+    Response: {"success":false,"error":"File not found"}
+[2] tool_completed: Bash (01KE5PXJ)
+    Input: {"command":"ls"}
+    Response: {"success":true}
 ```
 
 ### Phase 2: Session Management (Future)

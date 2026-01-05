@@ -194,8 +194,52 @@ jwz read trace:abc123 --json
 |------|------------|--------|
 | SessionStart | `session_start` | timestamp |
 | UserPromptSubmit | `prompt_received` | timestamp, prompt |
-| PostToolUse | `tool_completed` | timestamp, tool_name, tool_input, tool_output |
+| PostToolUse | `tool_completed` | timestamp, tool_name, tool_input, tool_response, success |
 | SessionEnd | `session_end` | timestamp |
+
+### CLI Commands
+
+The `idle` CLI queries traces from jwz:
+
+```bash
+# Show trace for a session
+idle trace <session_id>
+
+# Verbose mode - show tool inputs and responses
+idle trace <session_id> -v
+
+# Export as GraphViz DOT
+idle trace <session_id> --format dot > trace.dot
+
+# List recent sessions
+idle sessions
+```
+
+**Example output:**
+
+```
+=== Session abc123 ===
+
+[1] session_start (01KE5ABC)
+[2] prompt_received: "Fix the auth bug" (01KE5DEF)
+[3] tool_completed: Read (01KE5GHI)
+[4] tool_completed: Edit (01KE5JKL)
+[5] tool_completed: Bash [FAILED] (01KE5MNO)
+
+5 events total
+=== End Session ===
+```
+
+**Verbose mode (`-v`):**
+
+```
+[3] tool_completed: Read (01KE5GHI)
+    Input: {"file_path":"/src/auth.ts"}
+    Response: {"success":true}
+[5] tool_completed: Bash [FAILED] (01KE5MNO)
+    Input: {"command":"npm test"}
+    Response: {"success":false,"error":"Test failed"}
+```
 
 ### Hook Configuration
 

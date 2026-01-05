@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Zig CLI for trace queries** - Re-introduced Zig CLI for session trace construction
+  - `idle trace <session_id>` - Show trace for a session
+  - `idle trace <session_id> -v` - Verbose mode showing tool inputs/outputs
+  - `idle trace <session_id> --format dot` - Export as GraphViz DOT
+  - `idle sessions` - List recent sessions (placeholder)
+  - `idle version` - Show version information
+- **Tool failure tracking** - Traces now capture `success` field from tool responses
+  - `[FAILED]` indicator displayed for failed tool calls
+  - Helps identify tool invocation issues for debugging
+- **New trace hooks** - Capture session events for post-hoc analysis
+  - `SessionStart` hook emits `session_start` event
+  - `UserPromptSubmit` hook emits `prompt_received` event
+  - `PostToolUse` hook emits `tool_completed` event with success status
+  - `SessionEnd` hook emits `session_end` event
+
+### Changed
+
+- **Trace event schema** - `tool_completed` events now include:
+  - `tool_input` - JSON of arguments passed to tool
+  - `tool_response` - JSON response from tool (truncated if >4KB)
+  - `success` - Boolean indicating tool success/failure
+
 ## [2.2.0] - 2025-12-31
 
 ### Changed

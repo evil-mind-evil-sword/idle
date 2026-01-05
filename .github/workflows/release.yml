@@ -8,22 +8,108 @@ on:
 permissions:
   contents: write
 
+env:
+  ZIG_VERSION: "0.15.2"
+  SITE_REPO: "evil-mind-evil-sword/evil-mind-evil-sword.github.io"
+  RELEASES_BASE: "https://evil-mind-evil-sword.github.io/releases"
+
 jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+            artifact: idle-linux-x86_64
+            zig_platform: x86_64-linux
+          - os: macos-latest
+            target: x86_64-macos
+            artifact: idle-macos-x86_64
+            zig_platform: aarch64-macos
+          - os: macos-latest
+            target: aarch64-macos
+            artifact: idle-macos-aarch64
+            zig_platform: aarch64-macos
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Zig
+        run: |
+          curl -L "https://ziglang.org/download/${{ env.ZIG_VERSION }}/zig-${{ matrix.zig_platform }}-${{ env.ZIG_VERSION }}.tar.xz" | tar -xJ
+          echo "$PWD/zig-${{ matrix.zig_platform }}-${{ env.ZIG_VERSION }}" >> $GITHUB_PATH
+
+      - name: Verify Zig
+        run: zig version
+
+      - name: Fetch dependencies
+        run: |
+          # Get latest versions from site manifest
+          MANIFEST=$(curl -fsSL "${RELEASES_BASE}/manifest.json" || echo '{}')
+
+          ZAWINSKI_VERSION=$(echo "$MANIFEST" | jq -r '.zawinski // "v26.1.1"')
+          TISSUE_VERSION=$(echo "$MANIFEST" | jq -r '.tissue // "v26.1.1"')
+
+          echo "Using zawinski $ZAWINSKI_VERSION, tissue $TISSUE_VERSION"
+
+          # Fetch and save dependencies (updates build.zig.zon with correct hashes)
+          zig fetch --save=zawinski "https://github.com/evil-mind-evil-sword/zawinski/archive/refs/tags/${ZAWINSKI_VERSION}.tar.gz"
+          zig fetch --save=tissue "https://github.com/evil-mind-evil-sword/tissue/archive/refs/tags/${TISSUE_VERSION}.tar.gz"
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseFast -Dtarget=${{ matrix.target }}
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp zig-out/bin/idle dist/${{ matrix.artifact }}
+          chmod +x dist/${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}
+
   release:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Package plugin
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Prepare release assets
         run: |
           mkdir -p release
 
-          # Create plugin tarball (excludes .git, tests, docs)
+          # Copy CLI binaries
+          for dir in dist/*/; do
+            artifact=$(basename "$dir")
+            cp "$dir$artifact" "release/$artifact"
+            chmod +x "release/$artifact"
+          done
+
+          # Create plugin tarball (excludes .git, tests, docs, src, zig build artifacts)
           tar -czf release/idle-plugin.tar.gz \
             --exclude='.git*' \
             --exclude='tests' \
             --exclude='.github' \
+            --exclude='src' \
+            --exclude='zig-out' \
+            --exclude='.zig-cache' \
+            --exclude='build.zig' \
+            --exclude='build.zig.zon' \
             .claude-plugin \
             agents \
             hooks \
@@ -31,15 +117,105 @@ jobs:
             README.md \
             LICENSE
 
-          # Copy install script
-          cp install.sh release/install.sh
-          chmod +x release/install.sh
-
           # Create checksums
           cd release
           sha256sum * > checksums.txt
 
-      - name: Create Release
+      - name: Create install script
+        run: |
+          cat > release/install.sh << 'EOF'
+          #!/bin/sh
+          set -e
+
+          # idle installer
+          # Usage: curl -fsSL https://evil-mind-evil-sword.github.io/releases/idle/install.sh | sh
+
+          RELEASES_BASE="https://evil-mind-evil-sword.github.io/releases"
+          INSTALL_DIR="${IDLE_INSTALL_DIR:-$HOME/.local/bin}"
+
+          # Detect OS and architecture
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+
+          case "$OS" in
+            linux) OS="linux" ;;
+            darwin) OS="macos" ;;
+            *) echo "Unsupported OS: $OS"; exit 1 ;;
+          esac
+
+          case "$ARCH" in
+            x86_64|amd64) ARCH="x86_64" ;;
+            aarch64|arm64) ARCH="aarch64" ;;
+            *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+          esac
+
+          BINARY="idle-${OS}-${ARCH}"
+
+          # Get version from manifest
+          if [ -n "$IDLE_VERSION" ]; then
+            VERSION="$IDLE_VERSION"
+          else
+            VERSION=$(curl -fsSL "${RELEASES_BASE}/manifest.json" | grep -o '"idle"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"\([^"]*\)"$/\1/')
+          fi
+
+          URL="${RELEASES_BASE}/idle/${VERSION}/${BINARY}"
+
+          echo "Installing idle CLI ${VERSION} for ${OS}/${ARCH}..."
+
+          mkdir -p "$INSTALL_DIR"
+          curl -fsSL "$URL" -o "$INSTALL_DIR/idle"
+          chmod +x "$INSTALL_DIR/idle"
+
+          echo "idle CLI installed to $INSTALL_DIR/idle"
+
+          if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
+            echo ""
+            echo "Add to your PATH:"
+            echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
+          fi
+
+          echo ""
+          echo "Note: The idle Claude Code plugin is installed separately via:"
+          echo "  claude /plugin install idle@emes"
+          echo ""
+          echo "Get started with the CLI:"
+          echo "  idle trace <session_id>     # View session trace"
+          echo "  idle trace <session_id> -v  # Verbose: show tool inputs/outputs"
+          EOF
+          chmod +x release/install.sh
+
+      - name: Checkout site repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SITE_REPO }}
+          path: site
+          token: ${{ secrets.SITE_DEPLOY_KEY }}
+
+      - name: Deploy to site
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p "site/releases/idle/${VERSION}"
+          cp release/* "site/releases/idle/${VERSION}/"
+          cp release/install.sh "site/releases/idle/install.sh"
+
+          # Update manifest
+          cd site/releases
+          if [ -f manifest.json ]; then
+            jq --arg v "$VERSION" '.idle = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          else
+            echo "{\"idle\": \"$VERSION\"}" > manifest.json
+          fi
+
+      - name: Commit and push to site
+        run: |
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release idle ${{ steps.version.outputs.version }}" || exit 0
+          git push
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
