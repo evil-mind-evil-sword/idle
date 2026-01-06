@@ -6,6 +6,7 @@ Be aware:
 - It's kind of like a "super ultra extra thinking" mode for Claude Code, with some interesting and useful properties.
 - Can accidentally (or intentionally) be used to run Claude Code for many hours without intervention.
 - I would not recommend unless you're rolling a variant of the Max plan. The reviews are extensive and exhaustive, and the token usage is consequentially large.
+    - I'm thinking about how to optimize this via prompting, but that work hasn't been done yet.
 
 For best results, I would mix in Codex and/or Gemini -- just install the CLIs and auth them, `idle` will pick them up automatically. Mixing multiple agents into the review process _seems_ to really improve the steering.
 
