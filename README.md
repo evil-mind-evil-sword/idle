@@ -8,7 +8,7 @@ Quality gate plugin for Claude Code. Blocks Claude from stopping (via Claude Cod
 - Can intentionally be used to run Claude Code on a task for many hours without intervention.
 - If you're tight on tokens, I would not recommend unless you're rolling a variant of the Max plan. The reviews are extensive and exhaustive, and the token usage is consequentially large.
     - I'm thinking about how to optimize this via prompting, but that work hasn't been done yet.
-    - Codex, in particular, on high or xhigh reasoning will take several minutes to review -- but is extremely thorough. Keep this in mind.
+    - When Codex is used within consensus reviewing, in particular, on high or xhigh reasoning will take several minutes to review -- but is extremely thorough. Keep this in mind.
 
 For best results, I would mix in Codex and/or Gemini -- just install the CLIs and auth them, `idle` will pick them up automatically. Mixing multiple agents into the review process _seems_ to really improve the steering.
 
