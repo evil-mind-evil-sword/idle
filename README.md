@@ -11,6 +11,8 @@ Quality gate plugin for Claude Code. Blocks Claude from stopping (via Claude Cod
 
 For best results, I would mix in Codex and/or Gemini -- just install the CLIs and auth them, `idle` will pick them up automatically. Mixing multiple agents into the review process _seems_ to really improve the steering.
 
+**What this plugin doesn't solve**: what you desire or how you communicate it. Be clear about what you want before you turn it on.
+
 ## Install
 
 ```sh
