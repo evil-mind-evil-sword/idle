@@ -49,8 +49,8 @@ jobs:
           # Get latest versions from site manifest
           MANIFEST=$(curl -fsSL "${RELEASES_BASE}/manifest.json" || echo '{}')
 
-          ZAWINSKI_VERSION=$(echo "$MANIFEST" | jq -r '.zawinski // "v26.1.1"')
-          TISSUE_VERSION=$(echo "$MANIFEST" | jq -r '.tissue // "v26.1.1"')
+          ZAWINSKI_VERSION=$(echo "$MANIFEST" | jq -r '.zawinski.version // "v26.1.1"')
+          TISSUE_VERSION=$(echo "$MANIFEST" | jq -r '.tissue.version // "v26.1.1"')
 
           echo "Using zawinski $ZAWINSKI_VERSION, tissue $TISSUE_VERSION"
 
