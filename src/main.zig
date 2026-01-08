@@ -5,6 +5,7 @@
 //!   idle trace <session_id> --format dot Export as GraphViz
 //!   idle sessions                        List recent sessions
 //!   idle warnings <session_id>           Show warnings for a session
+//!   idle hook <name>                     Run a Claude Code hook (stdin/stdout)
 //!   idle version                         Show version
 
 const std = @import("std");
@@ -40,6 +41,9 @@ pub fn main() !void {
         try cmdSessions(stdout, args[2..]);
     } else if (std.mem.eql(u8, command, "warnings")) {
         try cmdWarnings(allocator, stdout, args[2..]);
+    } else if (std.mem.eql(u8, command, "hook")) {
+        try cmdHook(allocator, args[2..]);
+        return; // Hook handles its own output
     } else if (std.mem.eql(u8, command, "version")) {
         try cmdVersion(stdout);
     } else if (std.mem.eql(u8, command, "help") or std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
@@ -73,6 +77,9 @@ fn printUsage(stdout: anytype) !void {
         \\  warnings <session_id> Show warnings for a session
         \\    --jwz <path>        Path to jwz store (auto-discovered if omitted)
         \\
+        \\  hook <name>           Run a Claude Code hook (reads JSON from stdin)
+        \\    Names: session-start, session-end, user-prompt, post-tool-use, stop
+        \\
         \\  version               Show version information
         \\  help                  Show this help message
         \\
@@ -82,8 +89,25 @@ fn printUsage(stdout: anytype) !void {
         \\  idle trace abc123-def456 --format dot > trace.dot
         \\  idle sessions --limit 5
         \\  idle warnings abc123-def456
+        \\  echo '{"session_id":"abc"}' | idle hook session-end
         \\
     );
+}
+
+fn cmdHook(allocator: std.mem.Allocator, args: []const []const u8) !void {
+    if (args.len == 0) {
+        var stderr_buf: [1024]u8 = undefined;
+        var stderr_writer = std.fs.File.stderr().writer(&stderr_buf);
+        const stderr = &stderr_writer.interface;
+        try stderr.writeAll("Error: hook name required\n");
+        try stderr.writeAll("Usage: idle hook <name>\n");
+        try stderr.writeAll("Names: session-start, session-end, user-prompt, post-tool-use, stop\n");
+        try stderr.flush();
+        std.process.exit(1);
+    }
+
+    const hook_name = args[0];
+    try idle.runHook(allocator, hook_name);
 }
 
 fn cmdTrace(allocator: std.mem.Allocator, stdout: anytype, args: []const []const u8) !void {

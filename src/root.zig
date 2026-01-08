@@ -5,8 +5,12 @@
 //! as data sources.
 
 pub const trace = @import("trace.zig");
+pub const hooks = @import("hooks.zig");
 
 /// Re-export trace types for convenience
 pub const Trace = trace.Trace;
 pub const TraceEvent = trace.TraceEvent;
 pub const EventType = trace.EventType;
+
+/// Re-export hook runner
+pub const runHook = hooks.runHook;
