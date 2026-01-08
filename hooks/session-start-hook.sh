@@ -181,9 +181,7 @@ You are running with the **idle** plugin.
 
 ### Review Mode
 
-The user may add \`#idle\` to a prompt to enable review mode. When active, you will be asked to invoke \`idle:alice\` for adversarial review before completing your response. No need to remember this—you will be prompted when required.
-
-Use \`#idle:stop\` to disable review mode and allow clean exit.
+\`#idle\` enables review mode. **Answer normally.** If alice review is required, you will be blocked and given instructions. Do not proactively invoke alice.
 
 ### Available Skills
 
