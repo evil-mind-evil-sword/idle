@@ -177,20 +177,10 @@ pub const AliceStatus = struct {
 
 /// Get the default alice store directory (~/.claude/alice/.jwz)
 /// Returns a slice that is either from environment or from the provided buffer
-pub fn getAliceJwzStore(buf: []u8) []const u8 {
-    const home = std.posix.getenv("HOME") orelse "/tmp";
-    if (std.posix.getenv("JWZ_STORE")) |store| {
-        // Expand tilde if present
-        if (store.len > 0 and store[0] == '~') {
-            if (store.len == 1) {
-                return std.fmt.bufPrint(buf, "{s}", .{home}) catch "/tmp/.jwz";
-            } else if (store[1] == '/') {
-                return std.fmt.bufPrint(buf, "{s}{s}", .{ home, store[1..] }) catch "/tmp/.jwz";
-            }
-        }
-        return store;
-    }
-    return std.fmt.bufPrint(buf, "{s}/.claude/alice/.jwz", .{home}) catch "/tmp/.jwz";
+/// Get the jwz store path using proper discovery (local stores first, then env var)
+pub fn getAliceJwzStore(allocator: std.mem.Allocator) ?[]const u8 {
+    // Use jwz's store discovery: local .jwz first, then JWZ_STORE env var
+    return jwz.store.discoverStoreDir(allocator) catch null;
 }
 
 /// Ensure parent directory exists
@@ -340,8 +330,10 @@ pub fn getTimestamp(buf: []u8) []const u8 {
 
 /// SessionEnd hook - marks session end in trace
 pub fn sessionEnd(allocator: std.mem.Allocator, input: HookInput) HookOutput {
-    var store_path_buf: [256]u8 = undefined;
-    const store_path = getAliceJwzStore(&store_path_buf);
+    const store_path = getAliceJwzStore(allocator) orelse {
+        return HookOutput.approve();
+    };
+    defer allocator.free(store_path);
 
     var store = openOrCreateStore(allocator, store_path) catch {
         return HookOutput.approve();
@@ -431,8 +423,10 @@ fn writeJsonValue(value: std.json.Value, writer: anytype) !void {
 
 /// PostToolUse hook - captures tool execution events for trace
 pub fn postToolUse(allocator: std.mem.Allocator, input: HookInput) HookOutput {
-    var store_path_buf: [256]u8 = undefined;
-    const store_path = getAliceJwzStore(&store_path_buf);
+    const store_path = getAliceJwzStore(allocator) orelse {
+        return HookOutput.approve();
+    };
+    defer allocator.free(store_path);
 
     var store = openOrCreateStore(allocator, store_path) catch {
         return HookOutput.approve();
@@ -507,8 +501,10 @@ pub fn postToolUse(allocator: std.mem.Allocator, input: HookInput) HookOutput {
 
 /// UserPromptSubmit hook - captures user messages and handles #alice command
 pub fn userPrompt(allocator: std.mem.Allocator, input: HookInput) HookOutput {
-    var store_path_buf: [256]u8 = undefined;
-    const store_path = getAliceJwzStore(&store_path_buf);
+    const store_path = getAliceJwzStore(allocator) orelse {
+        return HookOutput.approve();
+    };
+    defer allocator.free(store_path);
 
     var store = openOrCreateStore(allocator, store_path) catch {
         return HookOutput.approve();
@@ -677,8 +673,11 @@ fn escapeJsonString(s: []const u8, writer: anytype) !void {
 
 /// SessionStart hook - injects context and performs health checks
 pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
-    var store_path_buf: [256]u8 = undefined;
-    const store_path = getAliceJwzStore(&store_path_buf);
+    const store_path = getAliceJwzStore(allocator) orelse {
+        // Can't find any jwz store - continue without store features
+        return HookOutput.approve();
+    };
+    defer allocator.free(store_path);
     const source = input.source orelse "startup";
 
     // Get alice directory paths
@@ -934,8 +933,11 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
 
 /// Stop hook - gates exit on alice review
 pub fn stop(allocator: std.mem.Allocator, input: HookInput) HookOutput {
-    var store_path_buf: [256]u8 = undefined;
-    const store_path = getAliceJwzStore(&store_path_buf);
+    const store_path = getAliceJwzStore(allocator) orelse {
+        // Can't find any jwz store - fail open
+        return HookOutput.approve();
+    };
+    defer allocator.free(store_path);
 
     var store = openOrCreateStore(allocator, store_path) catch {
         // Fail open - review system can't function

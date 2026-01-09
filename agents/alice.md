@@ -199,8 +199,9 @@ jwz post "alice:status:<SESSION_ID>" -m '{
 }'
 ```
 
-**Important:** Replace `<SESSION_ID>` with the actual value (e.g., `alice:status:abc123-def456`).
-Do NOT use `$SESSION_ID` as a shell variable - it won't be defined.
+**Important:**
+- Replace `<SESSION_ID>` with the actual value (e.g., `alice:status:abc123-def456`)
+- Do NOT use `$SESSION_ID` as a shell variable - it won't be defined
 
 The stop hook reads from this topic to determine if work can proceed.
 If you don't post to the correct topic, the stop hook will block with stale data.
