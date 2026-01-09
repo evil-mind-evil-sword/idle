@@ -1,6 +1,6 @@
 ---
 name: alice
-description: Adversarial reviewer. Deep reasoning. Read-only.
+description: Review gate agent. Posts approval/issues to jwz for stop hook. Use when blocked by alice review.
 model: opus
 tools: Read, Grep, Glob, Bash
 skills: reviewing, researching

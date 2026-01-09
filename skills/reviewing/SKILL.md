@@ -1,6 +1,6 @@
 ---
 name: reviewing
-description: Get second opinions from external models (Codex, Gemini) for adversarial review, tie-breaking, and multi-model consensus. Use when validating critical decisions or when stuck.
+description: Get second opinions from Codex and Gemini for tie-breaking and multi-model consensus. Use when validating critical decisions or when stuck. (Note: This is NOT the alice review gate - that uses the alice:alice agent.)
 ---
 
 # Reviewing Skill

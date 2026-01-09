@@ -832,15 +832,45 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
     var codex_status: []const u8 = "not installed";
     var gemini_status: []const u8 = "not installed";
 
-    // Check tissue (just check if command exists for now)
+    // Check tissue and get ready issues
+    // Use input.cwd so tissue can find local .tissue/ stores
+    var ready_issues: []const u8 = "";
     if (std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &.{ "tissue", "list" },
+        .argv = &.{ "tissue", "list", "--limit", "1" },
+        .cwd = input.cwd,
         .max_output_bytes = 1024,
     })) |result| {
         allocator.free(result.stdout);
         allocator.free(result.stderr);
         tissue_status = if (result.term.Exited == 0) "ok" else "error";
+
+        // If tissue works, get ready issues (limit to 10 for context window)
+        if (result.term.Exited == 0) {
+            if (std.process.Child.run(.{
+                .allocator = allocator,
+                .argv = &.{ "tissue", "ready", "--limit", "10" },
+                .cwd = input.cwd,
+                .max_output_bytes = 4096,
+            })) |ready_result| {
+                defer allocator.free(ready_result.stderr);
+                if (ready_result.term.Exited == 0 and ready_result.stdout.len > 0) {
+                    // Trim trailing whitespace
+                    var end = ready_result.stdout.len;
+                    while (end > 0 and (ready_result.stdout[end - 1] == '\n' or ready_result.stdout[end - 1] == ' ')) {
+                        end -= 1;
+                    }
+                    if (end > 0) {
+                        ready_issues = ready_result.stdout[0..end];
+                        // Don't free stdout - we're keeping it
+                    } else {
+                        allocator.free(ready_result.stdout);
+                    }
+                } else {
+                    allocator.free(ready_result.stdout);
+                }
+            } else |_| {}
+        }
     } else |_| {}
 
     // Check codex
@@ -968,6 +998,8 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
         \\
         \\`#alice` enables review mode. **Answer normally.** If alice review is required, you will be blocked and given instructions. Do not proactively invoke alice.
         \\
+        \\**Important:** The alice review gate uses the `alice:alice` agent (Task tool), NOT the `alice:reviewing` skill.
+        \\
         \\### Available Skills
         \\
         \\{s}
@@ -977,6 +1009,24 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
         \\Session ID: `{s}`
         \\
     , .{ tissue_status, jwz_status, codex_status, gemini_status, skills, input.session_id }) catch {};
+
+    // Add ready issues if available
+    if (ready_issues.len > 0) {
+        writer.writeAll(
+            \\### Ready Issues
+            \\
+            \\Issues with no blockers (use `tissue show <id>` for details):
+            \\
+            \\```
+            \\
+        ) catch {};
+        writer.writeAll(ready_issues) catch {};
+        writer.writeAll(
+            \\
+            \\```
+            \\
+        ) catch {};
+    }
 
     if (review_cleaned) |cleaned_msg| {
         return HookOutput.approveWithMessage("SessionStart", context_list.items, cleaned_msg);
@@ -1216,9 +1266,9 @@ fn buildBlockReason(
 
     var writer = reason_list.writer(allocator);
     writer.print(
-        \\Review is enabled but alice hasn't approved. Spawn alice before exiting.
+        \\Review is enabled but alice hasn't approved.
         \\
-        \\Invoke alice with this prompt format:
+        \\Use the Task tool with subagent_type="alice:alice" and this prompt:
         \\
         \\---
         \\SESSION_ID={s}
@@ -1291,7 +1341,7 @@ fn buildBlockReasonWithIssues(
         \\
         \\
         \\---
-        \\Address these issues, then re-invoke alice for a fresh review.
+        \\Address these issues, then use the Task tool with subagent_type="alice:alice" for a fresh review.
         \\If you have questions about how to proceed, include them in your alice invocation - do not ask the user.
     ) catch {};
 
