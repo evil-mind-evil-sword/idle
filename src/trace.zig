@@ -123,7 +123,12 @@ pub const Trace = struct {
 
         for (messages) |msg| {
             const event = parseTraceEvent(allocator, session_id, msg) catch continue;
-            try events.append(allocator, event);
+            events.append(allocator, event) catch {
+                // Free event fields if append fails to avoid memory leak
+                allocator.free(event.id);
+                allocator.free(event.payload_json);
+                return error.OutOfMemory;
+            };
         }
 
         // Sort by timestamp (ascending)

@@ -267,11 +267,18 @@ pub fn emitWarningAndApprove(
     // Layer 3: approve with systemMessage for inline display
     // Note: Stop hooks don't support hookSpecificOutput, only systemMessage
     var msg_list: std.ArrayList(u8) = .empty;
+    defer msg_list.deinit(allocator);
     msg_list.writer(allocator).print("⚠️ alice: {s}", .{warning_msg}) catch {};
+
+    // Duplicate the message for the return value since msg_list will be deinitialized
+    const system_msg = if (msg_list.items.len > 0)
+        allocator.dupe(u8, msg_list.items) catch null
+    else
+        null;
 
     return .{
         .decision = .approve,
-        .systemMessage = if (msg_list.items.len > 0) msg_list.items else null,
+        .systemMessage = system_msg,
     };
 }
 
@@ -322,8 +329,11 @@ pub fn getLatestMessage(
 
     // Copy the fields we need
     const id = allocator.dupe(u8, messages[0].id) catch return null;
-    errdefer allocator.free(id);
-    const body = allocator.dupe(u8, messages[0].body) catch return null;
+    const body = allocator.dupe(u8, messages[0].body) catch {
+        // errdefer doesn't run on 'return null', so explicitly free id
+        allocator.free(id);
+        return null;
+    };
 
     return .{ .id = id, .body = body };
 }
@@ -713,6 +723,8 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
     var tissue_path: []const u8 = undefined;
     var tissue_needs_env_var = false;
     var tissue_path_allocated = false;
+    // Buffer declared outside switch to avoid dangling pointer when tissue_path references it
+    var tissue_store_buf: [256]u8 = undefined;
 
     if (tissue.store.discoverStoreDir(allocator)) |discovered_path| {
         tissue_path = discovered_path;
@@ -721,7 +733,6 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
     } else |err| switch (err) {
         error.StoreNotFound => {
             // No store found - create global alice store
-            var tissue_store_buf: [256]u8 = undefined;
             tissue_path = std.fmt.bufPrint(&tissue_store_buf, "{s}/.tissue", .{alice_dir}) catch "/tmp/.tissue";
             tissue_needs_env_var = true;
 
@@ -744,7 +755,6 @@ pub fn sessionStart(allocator: std.mem.Allocator, input: HookInput) HookOutput {
         },
         else => {
             // Other error - use fallback path but don't set env var
-            var tissue_store_buf: [256]u8 = undefined;
             tissue_path = std.fmt.bufPrint(&tissue_store_buf, "{s}/.tissue", .{alice_dir}) catch "/tmp/.tissue";
         },
     }
@@ -1281,8 +1291,8 @@ fn buildBlockReasonWithIssues(
         \\
         \\
         \\---
-        \\If you have already addressed these issues, re-invoke alice for a fresh review.
-        \\This review may be stale if you made changes since it was generated.
+        \\Address these issues, then re-invoke alice for a fresh review.
+        \\If you have questions about how to proceed, include them in your alice invocation - do not ask the user.
     ) catch {};
 
     const reason = allocator.dupe(u8, reason_list.items) catch "Review required";
